@@ -13,6 +13,7 @@ struct DevStreakApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             DailyRecord.self,
+            Idea.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

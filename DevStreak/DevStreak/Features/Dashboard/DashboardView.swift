@@ -10,10 +10,13 @@ import SwiftUI
 
 struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \DailyRecord.dateKey, order: .reverse) private var records: [DailyRecord]
 
     private let dateService = DateService()
     private let streakService = StreakService()
+    private let reminderSettingsStore = ReminderSettingsStore()
+    private let reminderNotificationService = ReminderNotificationService()
 
     @State private var saveErrorMessage: String?
 
@@ -89,6 +92,15 @@ struct DashboardView: View {
                         }
                     }
 
+                    NavigationLink {
+                        IdeaInboxView()
+                    } label: {
+                        Label("Idea Inbox", systemImage: "lightbulb")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+
                     CalendarMonthView(records: records, now: now)
 
                     if let saveErrorMessage {
@@ -100,6 +112,27 @@ struct DashboardView: View {
                 .padding()
             }
             .navigationTitle("DevStreak")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        ReminderSettingsView(isTodayCompleted: isTodayCompleted)
+                    } label: {
+                        Label("Reminder Settings", systemImage: "bell")
+                    }
+                }
+            }
+            .task {
+                await syncReminderSchedule()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else {
+                    return
+                }
+
+                Task {
+                    await syncReminderSchedule()
+                }
+            }
         }
     }
 
@@ -138,13 +171,25 @@ struct DashboardView: View {
         do {
             try modelContext.save()
             saveErrorMessage = nil
+
+            Task {
+                await reminderNotificationService.cancelTodayReminders(now: completionDate)
+            }
         } catch {
             saveErrorMessage = "Could not save today's record."
         }
+    }
+
+    private func syncReminderSchedule() async {
+        await reminderNotificationService.syncRollingSchedule(
+            settings: reminderSettingsStore.load(),
+            isTodayCompleted: isTodayCompleted,
+            now: now
+        )
     }
 }
 
 #Preview {
     DashboardView()
-        .modelContainer(for: DailyRecord.self, inMemory: true)
+        .modelContainer(for: [DailyRecord.self, Idea.self], inMemory: true)
 }

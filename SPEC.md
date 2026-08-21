@@ -568,12 +568,244 @@ Today = completed
 - 어제까지 연속 완료했다면 오늘 미완료 상태에서도 해당 streak를 유지한다.
 - 날짜가 넘어가 이전 날짜가 missed로 확정되었을 때 streak가 끊긴다.
 
+### Notification Rules
+
+목적:
+사용자가 하루에 최소 하나의 개발 기록을 남기도록 리마인드한다.
+
+기본 Reminder 슬롯:
+
+- Morning: 09:00
+- Evening: 18:00
+- Night: 22:00
+
+각 reminder는:
+
+- 개별 enable / disable 가능
+- 사용자가 시간을 변경 가능
+- local notification으로 동작
+- 서버나 backend를 사용하지 않음
+
+### Relationship with Daily Completion
+
+오늘 Daily Goal을 완료한 경우:
+
+- 오늘 날짜의 Morning / Evening / Night pending reminder notification만 제거한다.
+- 미래 날짜 reminder는 유지한다.
+- 이미 전달된 notification은 건드리지 않는다.
+- 오늘 추가 reminder를 다시 예약하지 않는다.
+
+다음 날이 되면:
+
+- 이미 예약된 rolling notification schedule에 따라 enabled reminder가 정상적으로 동작한다.
+- 앱이 다시 실행되거나 활성화되면 현재 설정 기준으로 rolling schedule을 다시 동기화한다.
+
+오늘 미완료인 경우:
+
+- enabled reminder는 설정된 시간에 동작한다.
+
+### Permission Rules
+
+- 앱이 처음 실행되자마자 notification permission을 요청하지 않는다.
+- Settings 화면에 notification authorization 상태를 명확히 표시한다.
+- notDetermined 상태에서는 "알림 허용하기" action을 제공한다.
+- 사용자가 해당 action을 명시적으로 눌렀을 때 requestAuthorization을 실행한다.
+- permission이 denied된 경우 앱이 crash하거나 반복 요청하지 않는다.
+- denied 상태에서는 알림이 시스템 설정에서 비활성화되어 있음을 명확히 표시한다.
+- denied 상태에서는 가능한 경우 iOS Settings로 이동할 수 있는 action을 제공한다.
+- authorized / provisional / ephemeral 상태에서는 현재 reminder preferences를 기준으로 notification을 예약한다.
+- reminder preference enabled 값과 notification authorization 상태는 서로 독립적으로 유지한다.
+- permission이 없어도 reminder preference 변경은 저장할 수 있지만 실제 notification은 예약하지 않는다.
+
+### Scheduling Rules
+
+- UNUserNotificationCenter를 사용한다.
+- local notification만 사용한다.
+- 오늘 날짜와 timezone을 명시적으로 고려한다.
+- 기본 scheduling horizon은 오늘을 포함하여 앞으로 14일이다.
+- Morning / Evening / Night가 모두 활성화되어 있으면 최대 3 * 14 = 42개의 notification request를 관리한다.
+- identifier는 날짜 기반 구조를 사용한다.
+- 예: devstreak.reminder.morning.2026-08-22
+- 이미 지난 시간의 오늘 reminder는 예약하지 않는다.
+- 미래 날짜는 enabled reminder를 정상 예약한다.
+- 오늘 Daily Goal이 completed이면 오늘 reminder는 예약하지 않는다.
+- 미래 날짜 reminder는 오늘 완료 여부와 관계없이 유지한다.
+- 오늘 goal을 완료하면 오늘 날짜 identifier만 취소한다.
+- 미래 날짜 notification은 취소하지 않는다.
+- 중복 notification request를 만들지 않는다.
+- 설정 변경 시 DevStreak가 관리하는 pending reminder를 정리하고 새 설정 기준으로 14일 rolling horizon을 다시 채운다.
+- 앱 실행/활성화 시 필요한 경우 현재 설정 기준으로 14일 rolling schedule을 동기화한다.
+- 사용자가 다음 날 앱을 실행하지 않아도 이미 예약된 notification이 정상적으로 동작해야 한다.
+
+### Notification Content
+
+Morning 예시:
+"오늘 하나 기록해볼까요?"
+
+Evening 예시:
+"오늘 아직 기록이 없어요. 짧게라도 하나 남겨볼까요?"
+
+Night 예시:
+"오늘의 기록이 아직 없어요. Streak가 끊기기 전에 하나 남겨보세요."
+
+문구는 Phase 2B에서는 고정 문자열로 두어도 된다.
+디자인/카피 refinement는 추후 수행한다.
+
+### Reminder Settings
+
+Settings 화면에서 다음을 관리한다.
+
+- Morning reminder enabled
+- Morning reminder time
+- Evening reminder enabled
+- Evening reminder time
+- Night reminder enabled
+- Night reminder time
+
+초기 기본값:
+
+- Morning: enabled, 09:00
+- Evening: enabled, 18:00
+- Night: enabled, 22:00
+
+설정은 local persistence를 사용한다.
+
 ## Phase 3 — Idea Inbox
 
 - Idea CRUD
 - Tags
 - Claude hand-off
 - Clipboard prompt generation
+
+### Idea Inbox Rules
+
+Idea는 개발 글감을 빠르게 저장하기 위한 lightweight local item이다.
+
+Idea model:
+
+- id
+- title
+- notes
+- tags
+- createdAt
+- updatedAt
+- status
+
+status:
+
+- inbox
+- used
+- archived
+
+필수 동작:
+
+- 새 Idea 추가
+- Idea 수정
+- Idea 삭제
+- archived 처리
+- archived 복구 가능
+- used 상태 처리 가능
+- 생성일/수정일 유지
+
+### Tag Rules
+
+- 하나의 Idea에 여러 tag 저장 가능
+- tag는 간단한 문자열 목록
+- Phase 3에서는 별도 Tag entity/table을 만들지 않는다.
+- 중복 tag는 저장하지 않는다.
+- 앞뒤 공백 제거
+- 빈 tag 저장 금지
+
+### Claude Hand-off Rules
+
+Claude API를 앱에 직접 연결하지 않는다.
+
+Idea에서 "Write with Claude"를 실행하면:
+
+1. 해당 Idea의 title / notes / tags를 기반으로 prompt 생성
+2. prompt를 clipboard에 복사
+3. 가능한 경우 Claude 앱 또는 웹으로 이동할 수 있는 action 제공
+
+Prompt 기본 구조:
+
+Dev Archive에 다음 주제로 글을 작성하려고 합니다.
+
+주제:
+{title}
+
+메모:
+{notes}
+
+태그:
+{tags}
+
+CONVENTIONS.md와 DESIGN_RULES.md의 규칙을 따라주세요.
+기존 Dev Archive의 글 스타일과 구조도 참고해주세요.
+
+중요:
+
+- 앱은 Claude에게 prompt를 전달하는 역할만 한다.
+- Claude API 호출은 하지 않는다.
+- 블로그 repository를 직접 수정하지 않는다.
+- GitHub write는 하지 않는다.
+
+### Used Rules
+
+Write with Claude 실행만으로 자동 used 처리하지 않는다.
+
+사용자가 명시적으로:
+
+- "작성에 사용함"
+
+또는 이에 해당하는 action을 수행했을 때만 status = used
+
+이유:
+Claude로 넘겼다고 실제 글을 작성했다고 보장할 수 없기 때문이다.
+
+### Relationship with Daily Goal
+
+Phase 3에서는 Idea 생성만으로 Daily Goal을 완료 처리하지 않는다.
+
+Daily Goal은 기존 manual completion / 향후 GitHub verified 기준을 유지한다.
+
+Idea는 글쓰기 준비 단계일 뿐이다.
+
+### Idea Inbox UI
+
+Dashboard에서 Idea Inbox로 진입할 수 있어야 한다.
+
+Idea Inbox 기본 구조:
+
+- Inbox
+- Used
+- Archived
+
+Phase 3에서는 복잡한 검색/필터 기능은 구현하지 않는다.
+
+Idea 작성 화면:
+
+- Title
+- Notes
+- Tags
+- Save
+
+Idea 상세/수정 화면:
+
+- 수정
+- Archive
+- Delete
+- Write with Claude
+- Mark as Used
+
+디자인 refinement는 나중에 진행한다.
+
+### Idea Persistence
+
+현재 SwiftData 구조를 활용한다.
+
+Idea는 SwiftData @Model로 저장한다.
+
+기존 DailyRecord persistence와 충돌하지 않도록 ModelContainer schema에 Idea를 추가한다.
 
 ## Phase 4 — Widget
 

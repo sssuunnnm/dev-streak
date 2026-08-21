@@ -500,6 +500,65 @@ manualCompleted
 - Notifications
 - Reminder settings
 
+### Daily Status Rules
+
+하루의 상태는 다음 세 가지로 해석한다.
+
+1. completed
+
+- 해당 날짜에 Daily Goal을 완료한 상태
+- manualCompleted 또는 githubVerified 기록이 존재
+
+2. missed
+
+- 이미 종료된 과거 날짜인데 완료 기록이 없는 상태
+
+3. pending
+
+- 오늘 날짜이며 아직 완료 기록이 없는 상태
+- 오늘은 아직 진행 중이므로 실패로 간주하지 않는다.
+
+중요:
+
+- 오늘 미작성 상태를 missed로 처리하지 않는다.
+- 오늘 미작성 때문에 월간 달성률이 떨어지면 안 된다.
+- 미래 날짜는 달성률 계산 대상이 아니다.
+
+### Monthly Completion Rate Rules
+
+오늘이 아직 미완료라면:
+
+- 오늘은 월간 달성률 계산에서 제외한다.
+- 종료된 과거 날짜만 분모로 사용한다.
+
+예:
+8월 21일이고,
+8월 1~20일 중 17일을 완료했으며
+오늘 21일은 아직 미완료라면:
+
+17 / 20 = 85%
+Today = pending
+
+오늘 21일을 완료하면:
+
+- 오늘을 completed로 포함한다.
+- 분모에도 오늘을 포함한다.
+
+18 / 21 ≈ 85.7%
+Today = completed
+
+즉 현재 날짜는 완료된 경우에만 월간 달성률 계산에 포함한다.
+
+미래 날짜는 항상 제외한다.
+
+### Relationship with Streak
+
+기존 Phase 1 규칙을 유지한다.
+
+- 오늘 pending이라는 이유만으로 current streak를 끊지 않는다.
+- 어제까지 연속 완료했다면 오늘 미완료 상태에서도 해당 streak를 유지한다.
+- 날짜가 넘어가 이전 날짜가 missed로 확정되었을 때 streak가 끊긴다.
+
 ## Phase 3 — Idea Inbox
 
 - Idea CRUD

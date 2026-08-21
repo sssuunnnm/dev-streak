@@ -44,6 +44,22 @@ struct HabitCalendarServiceTests {
         #expect(service.status(for: "2026-08-22", records: [], now: now) == .future)
     }
 
+    @Test func futureManualCompletedRecordIsStillFuture() {
+        let service = Self.service
+        let now = Self.noon("2026-08-21")
+        let records = [Self.record("2026-08-22", status: .manualCompleted)]
+
+        #expect(service.status(for: "2026-08-22", records: records, now: now) == .future)
+    }
+
+    @Test func futureGitHubVerifiedRecordIsStillFuture() {
+        let service = Self.service
+        let now = Self.noon("2026-08-21")
+        let records = [Self.record("2026-08-22", status: .githubVerified)]
+
+        #expect(service.status(for: "2026-08-22", records: records, now: now) == .future)
+    }
+
     @Test func todayPendingIsExcludedFromMonthlyCompletionRate() {
         let service = Self.service
         let now = Self.noon("2026-08-21")
@@ -72,6 +88,21 @@ struct HabitCalendarServiceTests {
         let service = Self.service
         let now = Self.noon("2026-08-02")
         let records = [Self.record("2026-08-01")]
+        let rate = service.monthlyCompletionRate(containing: now, records: records, now: now)
+
+        #expect(rate.completedDays == 1)
+        #expect(rate.eligibleDays == 1)
+        #expect(rate.rate == 1)
+    }
+
+    @Test func futureCompletedRecordsAreExcludedFromMonthlyCompletionRate() {
+        let service = Self.service
+        let now = Self.noon("2026-08-02")
+        let records = [
+            Self.record("2026-08-01"),
+            Self.record("2026-08-03", status: .manualCompleted),
+            Self.record("2026-08-04", status: .githubVerified)
+        ]
         let rate = service.monthlyCompletionRate(containing: now, records: records, now: now)
 
         #expect(rate.completedDays == 1)

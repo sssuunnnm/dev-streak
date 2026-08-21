@@ -59,23 +59,16 @@ struct HabitCalendarService {
     }
 
     func status(for dateKey: String, records: [DailyRecord], now: Date = .now) -> DailyStatus {
-        let completedDateKeys = Set(records.filter { $0.status.isCompleted }.map(\.dateKey))
-        if completedDateKeys.contains(dateKey) {
-            return .completed
-        }
-
         let todayKey = dateService.todayKey(now: now)
-        if dateKey == todayKey {
-            return .pending
-        }
-
         switch dateService.compare(dateKey, todayKey) {
         case .orderedAscending:
-            return .missed
+            let completedDateKeys = Set(records.filter { $0.status.isCompleted }.map(\.dateKey))
+            return completedDateKeys.contains(dateKey) ? .completed : .missed
         case .orderedDescending:
             return .future
         case .orderedSame:
-            return .pending
+            let completedDateKeys = Set(records.filter { $0.status.isCompleted }.map(\.dateKey))
+            return completedDateKeys.contains(dateKey) ? .completed : .pending
         case nil:
             return .future
         }

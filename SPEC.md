@@ -502,12 +502,13 @@ manualCompleted
 
 ### Daily Status Rules
 
-하루의 상태는 다음 세 가지로 해석한다.
+하루의 상태는 다음 네 가지로 해석한다.
 
 1. completed
 
 - 해당 날짜에 Daily Goal을 완료한 상태
 - manualCompleted 또는 githubVerified 기록이 존재
+- 단, 오늘보다 미래 날짜는 완료 기록이 존재하더라도 future로 취급한다.
 
 2. missed
 
@@ -518,11 +519,19 @@ manualCompleted
 - 오늘 날짜이며 아직 완료 기록이 없는 상태
 - 오늘은 아직 진행 중이므로 실패로 간주하지 않는다.
 
+4. future
+
+- 오늘보다 미래 날짜
+- 완료 record가 존재하더라도 future로 취급
+- monthly completion rate 분자/분모에서 항상 제외
+- missed/pending으로 표시하지 않음
+
 중요:
 
 - 오늘 미작성 상태를 missed로 처리하지 않는다.
 - 오늘 미작성 때문에 월간 달성률이 떨어지면 안 된다.
 - 미래 날짜는 달성률 계산 대상이 아니다.
+- 미래 날짜는 missed 또는 pending으로 처리하지 않는다.
 
 ### Monthly Completion Rate Rules
 

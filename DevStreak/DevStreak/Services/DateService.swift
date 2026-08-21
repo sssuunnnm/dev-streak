@@ -47,6 +47,37 @@ struct DateService {
         ))
     }
 
+    func dateTime(for dateKey: String, hour: Int, minute: Int) -> Date? {
+        let parts = dateKey.split(separator: "-")
+        guard parts.count == 3,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2]) else {
+            return nil
+        }
+
+        return calendar.date(from: DateComponents(
+            calendar: calendar,
+            timeZone: calendar.timeZone,
+            year: year,
+            month: month,
+            day: day,
+            hour: hour,
+            minute: minute
+        ))
+    }
+
+    func dateComponents(for dateKey: String, hour: Int, minute: Int) -> DateComponents? {
+        guard let date = dateTime(for: dateKey, hour: hour, minute: minute) else {
+            return nil
+        }
+
+        var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        components.calendar = calendar
+        components.timeZone = calendar.timeZone
+        return components
+    }
+
     func addingDays(_ days: Int, to dateKey: String) -> String? {
         guard let date = date(from: dateKey),
               let adjustedDate = calendar.date(byAdding: .day, value: days, to: date) else {

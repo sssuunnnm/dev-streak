@@ -134,6 +134,60 @@ struct ReminderNotificationServiceTests {
         #expect(!scheduler.addedRequests.contains { $0.identifier == "devstreak.reminder.morning.2026-08-21" })
     }
 
+    @Test func staleSyncDoesNotReaddTodayAfterCancelTodayReminders() async {
+        let scheduler = FakeUserNotificationScheduler(status: .authorized)
+        scheduler.pendingRequests = [
+            Self.request("devstreak.reminder.morning.2026-08-22"),
+            Self.request("devstreak.reminder.evening.2026-08-22"),
+            Self.request("devstreak.reminder.night.2026-08-22"),
+            Self.request("devstreak.reminder.morning.2026-08-23"),
+            Self.request("devstreak.reminder.evening.2026-08-23"),
+            Self.request("devstreak.reminder.night.2026-08-23")
+        ]
+        scheduler.pauseNextAuthorizationStatus()
+        let service = Self.service(scheduler: scheduler)
+        let now = Self.date("2026-08-22", hour: 8)
+
+        let syncTask = Task {
+            await service.syncRollingSchedule(settings: .default, isTodayCompleted: false, now: now)
+        }
+        await scheduler.waitUntilAuthorizationStatusRequested()
+
+        await service.cancelTodayReminders(now: now)
+        scheduler.resumeAuthorizationStatus()
+        await syncTask.value
+
+        #expect(!scheduler.addedRequests.contains { $0.identifier.contains("2026-08-22") })
+        #expect(!scheduler.pendingRequests.contains { $0.identifier.contains("2026-08-22") })
+        #expect(scheduler.pendingRequests.contains { $0.identifier == "devstreak.reminder.morning.2026-08-23" })
+        #expect(scheduler.pendingRequests.contains { $0.identifier == "devstreak.reminder.evening.2026-08-23" })
+        #expect(scheduler.pendingRequests.contains { $0.identifier == "devstreak.reminder.night.2026-08-23" })
+    }
+
+    @Test func overlappingSyncsOnlyAllowLatestSyncToAddRequests() async {
+        let scheduler = FakeUserNotificationScheduler(status: .authorized)
+        scheduler.pauseNextAuthorizationStatus()
+        let service = Self.service(scheduler: scheduler)
+        let now = Self.date("2026-08-22", hour: 8)
+        let nightOnlySettings = ReminderSettings(
+            morning: ReminderPreference(isEnabled: false, hour: 9, minute: 0),
+            evening: ReminderPreference(isEnabled: false, hour: 18, minute: 0),
+            night: ReminderPreference(isEnabled: true, hour: 22, minute: 0)
+        )
+
+        let staleSyncTask = Task {
+            await service.syncRollingSchedule(settings: .default, isTodayCompleted: false, now: now)
+        }
+        await scheduler.waitUntilAuthorizationStatusRequested()
+
+        await service.syncRollingSchedule(settings: nightOnlySettings, isTodayCompleted: false, now: now)
+        scheduler.resumeAuthorizationStatus()
+        await staleSyncTask.value
+
+        #expect(scheduler.addedRequests.count == 14)
+        #expect(scheduler.addedRequests.allSatisfy { $0.identifier.contains(".night.") })
+    }
+
     private static func service(scheduler: FakeUserNotificationScheduler) -> ReminderNotificationService {
         ReminderNotificationService(
             scheduler: scheduler,
@@ -179,6 +233,10 @@ private final class FakeUserNotificationScheduler: UserNotificationScheduling {
     var addedRequests: [ScheduledReminderRequest] = []
     var removedIdentifiers: [String] = []
     var requestAuthorizationCallCount = 0
+    private var shouldPauseNextAuthorizationStatus = false
+    private var authorizationStatusRequested = false
+    private var authorizationStatusWaiter: CheckedContinuation<Void, Never>?
+    private var authorizationStatusContinuation: CheckedContinuation<Void, Never>?
 
     init(status: ReminderAuthorizationStatus, pendingRequests: [ScheduledReminderRequest] = []) {
         self.status = status
@@ -186,7 +244,18 @@ private final class FakeUserNotificationScheduler: UserNotificationScheduling {
     }
 
     func authorizationStatus() async -> ReminderAuthorizationStatus {
-        status
+        authorizationStatusRequested = true
+        authorizationStatusWaiter?.resume()
+        authorizationStatusWaiter = nil
+
+        if shouldPauseNextAuthorizationStatus {
+            shouldPauseNextAuthorizationStatus = false
+            await withCheckedContinuation { continuation in
+                authorizationStatusContinuation = continuation
+            }
+        }
+
+        return status
     }
 
     func requestAuthorization() async throws -> Bool {
@@ -207,5 +276,25 @@ private final class FakeUserNotificationScheduler: UserNotificationScheduling {
 
     func pendingNotificationRequests() async -> [ScheduledReminderRequest] {
         pendingRequests
+    }
+
+    func pauseNextAuthorizationStatus() {
+        shouldPauseNextAuthorizationStatus = true
+        authorizationStatusRequested = false
+    }
+
+    func waitUntilAuthorizationStatusRequested() async {
+        guard !authorizationStatusRequested else {
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            authorizationStatusWaiter = continuation
+        }
+    }
+
+    func resumeAuthorizationStatus() {
+        authorizationStatusContinuation?.resume()
+        authorizationStatusContinuation = nil
     }
 }

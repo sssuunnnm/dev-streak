@@ -112,15 +112,18 @@ struct ReminderNotificationService {
     private let scheduler: UserNotificationScheduling
     private let dateService: DateService
     private let horizonDays: Int
+    private let scheduleState: ReminderScheduleState
 
     init(
         scheduler: UserNotificationScheduling = UserNotificationCenterAdapter(),
         dateService: DateService = DateService(),
-        horizonDays: Int = 14
+        horizonDays: Int = 14,
+        scheduleState: ReminderScheduleState = ReminderScheduleState()
     ) {
         self.scheduler = scheduler
         self.dateService = dateService
         self.horizonDays = horizonDays
+        self.scheduleState = scheduleState
     }
 
     func authorizationStatus() async -> ReminderAuthorizationStatus {
@@ -132,19 +135,41 @@ struct ReminderNotificationService {
     }
 
     func syncRollingSchedule(settings: ReminderSettings, isTodayCompleted: Bool, now: Date = .now) async {
-        await removeManagedPendingRequests()
+        let generation = await scheduleState.nextGeneration()
 
         let status = await scheduler.authorizationStatus()
-        guard status.canScheduleNotifications else {
+        guard await scheduleState.isCurrent(generation) else {
             return
         }
 
-        for request in requests(settings: settings, isTodayCompleted: isTodayCompleted, now: now) {
+        guard status.canScheduleNotifications else {
+            await removeManagedPendingRequests()
+            return
+        }
+
+        let desiredRequests = requests(settings: settings, isTodayCompleted: isTodayCompleted, now: now)
+        await removeManagedPendingRequestsNotIn(Set(desiredRequests.map(\.identifier)))
+
+        guard await scheduleState.isCurrent(generation) else {
+            return
+        }
+
+        for request in desiredRequests {
+            guard await scheduleState.isCurrent(generation) else {
+                return
+            }
+
             try? await scheduler.add(request)
+
+            guard await scheduleState.isCurrent(generation) else {
+                scheduler.removePendingNotificationRequests(withIdentifiers: [request.identifier])
+                return
+            }
         }
     }
 
     func cancelTodayReminders(now: Date = .now) async {
+        _ = await scheduleState.nextGeneration()
         scheduler.removePendingNotificationRequests(withIdentifiers: todayReminderIdentifiers(now: now))
     }
 
@@ -208,5 +233,30 @@ struct ReminderNotificationService {
         }
 
         scheduler.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+
+    private func removeManagedPendingRequestsNotIn(_ desiredIdentifiers: Set<String>) async {
+        let identifiers = await scheduler.pendingNotificationRequests()
+            .map(\.identifier)
+            .filter { $0.hasPrefix(Self.managedIdentifierPrefix) && !desiredIdentifiers.contains($0) }
+
+        guard !identifiers.isEmpty else {
+            return
+        }
+
+        scheduler.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+}
+
+actor ReminderScheduleState {
+    private var generation = 0
+
+    func nextGeneration() -> Int {
+        generation += 1
+        return generation
+    }
+
+    func isCurrent(_ generation: Int) -> Bool {
+        self.generation == generation
     }
 }

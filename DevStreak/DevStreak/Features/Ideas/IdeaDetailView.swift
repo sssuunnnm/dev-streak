@@ -124,20 +124,25 @@ struct IdeaDetailView: View {
 
     private func updateStatus(_ status: IdeaStatus) {
         idea.updateStatus(status)
-        saveChanges()
+        _ = saveChanges()
     }
 
     private func deleteIdea() {
         modelContext.delete(idea)
-        saveChanges()
-        dismiss()
+
+        if saveChanges() {
+            dismiss()
+        }
     }
 
-    private func saveChanges() {
+    private func saveChanges() -> Bool {
         do {
             try modelContext.save()
+            return true
         } catch {
+            modelContext.rollback()
             actionMessage = "Could not save changes."
+            return false
         }
     }
 }

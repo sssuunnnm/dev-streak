@@ -41,9 +41,50 @@ struct DateServiceTests {
         #expect(!service.isPreviousDay("2026-08-19", before: "2026-08-21"))
     }
 
+    @Test func createsDateKeysForMonth() {
+        let service = DateService(calendar: Self.calendar(timeZoneIdentifier: "Asia/Seoul"))
+        let monthDate = Self.noon("2026-08-21", timeZoneIdentifier: "Asia/Seoul")
+        let dateKeys = service.monthDateKeys(containing: monthDate)
+
+        #expect(dateKeys.count == 31)
+        #expect(dateKeys.first == "2026-08-01")
+        #expect(dateKeys.last == "2026-08-31")
+    }
+
+    @Test func calculatesLeadingBlankDaysWithMondayFirstCalendar() {
+        let service = DateService(calendar: Self.calendar(timeZoneIdentifier: "Asia/Seoul"))
+        let monthDate = Self.noon("2026-08-21", timeZoneIdentifier: "Asia/Seoul")
+
+        #expect(service.leadingBlankDayCount(containing: monthDate) == 5)
+    }
+
+    @Test func comparesDateKeysAtDayGranularity() {
+        let service = DateService(calendar: Self.calendar(timeZoneIdentifier: "UTC"))
+
+        #expect(service.compare("2026-08-20", "2026-08-21") == .orderedAscending)
+        #expect(service.compare("2026-08-21", "2026-08-21") == .orderedSame)
+        #expect(service.compare("2026-08-22", "2026-08-21") == .orderedDescending)
+        #expect(service.compare("invalid", "2026-08-21") == nil)
+    }
+
     private static func calendar(timeZoneIdentifier: String) -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: timeZoneIdentifier)!
+        calendar.firstWeekday = 2
         return calendar
+    }
+
+    private static func noon(_ dateKey: String, timeZoneIdentifier: String) -> Date {
+        let parts = dateKey.split(separator: "-").compactMap { Int(String($0)) }
+        let calendar = calendar(timeZoneIdentifier: timeZoneIdentifier)
+
+        return calendar.date(from: DateComponents(
+            calendar: calendar,
+            timeZone: calendar.timeZone,
+            year: parts[0],
+            month: parts[1],
+            day: parts[2],
+            hour: 12
+        ))!
     }
 }

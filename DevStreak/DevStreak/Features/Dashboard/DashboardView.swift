@@ -43,60 +43,62 @@ struct DashboardView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 28) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Today")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-
-                    Text(todayKey)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Text(isTodayCompleted ? "1 / 1" : "0 / 1")
-                        .font(.system(size: 56, weight: .bold, design: .rounded))
-                        .contentTransition(.numericText())
-
-                    Text(isTodayCompleted ? "Writing recorded for today." : "No writing activity yet.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                }
-
-                Button(action: markTodayCompleted) {
-                    Label(isTodayCompleted ? "Completed Today" : "Write Today", systemImage: isTodayCompleted ? "checkmark.circle.fill" : "square.and.pencil")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(isTodayCompleted)
-
-                HStack(spacing: 16) {
-                    streakMetric(title: "Current Streak", value: currentStreak)
-                    streakMetric(title: "Best Streak", value: bestStreak)
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Recent Activity")
-                        .font(.headline)
-
-                    if let todayRecord, todayRecord.status.isCompleted {
-                        Text("Manual completion recorded today.")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Today")
+                            .font(.headline)
                             .foregroundStyle(.secondary)
-                    } else {
-                        Text("No writing activity yet.")
+
+                        Text(todayKey)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                        Text(isTodayCompleted ? "1 / 1" : "0 / 1")
+                            .font(.system(size: 56, weight: .bold, design: .rounded))
+                            .contentTransition(.numericText())
+
+                        Text(isTodayCompleted ? "Writing recorded for today." : "No writing activity yet.")
+                            .font(.body)
                             .foregroundStyle(.secondary)
                     }
-                }
 
-                if let saveErrorMessage {
-                    Text(saveErrorMessage)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                }
+                    Button(action: markTodayCompleted) {
+                        Label(isTodayCompleted ? "Completed Today" : "Write Today", systemImage: isTodayCompleted ? "checkmark.circle.fill" : "square.and.pencil")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(isTodayCompleted)
 
-                Spacer()
+                    HStack(spacing: 16) {
+                        streakMetric(title: "Current Streak", value: currentStreak)
+                        streakMetric(title: "Best Streak", value: bestStreak)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Recent Activity")
+                            .font(.headline)
+
+                        if let todayRecord, todayRecord.status.isCompleted {
+                            Text("Manual completion recorded today.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("No writing activity yet.")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    CalendarMonthView(records: records, now: now)
+
+                    if let saveErrorMessage {
+                        Text(saveErrorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                }
+                .padding()
             }
-            .padding()
             .navigationTitle("DevStreak")
         }
     }

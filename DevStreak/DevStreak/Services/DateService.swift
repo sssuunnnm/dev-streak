@@ -59,12 +59,64 @@ struct DateService {
     func isPreviousDay(_ previous: String, before current: String) -> Bool {
         addingDays(1, to: previous) == current
     }
+
+    func monthDateKeys(containing date: Date) -> [String] {
+        guard let interval = calendar.dateInterval(of: .month, for: date),
+              let dayRange = calendar.range(of: .day, in: .month, for: interval.start) else {
+            return []
+        }
+
+        return dayRange.compactMap { day -> String? in
+            guard let monthDate = calendar.date(byAdding: .day, value: day - 1, to: interval.start) else {
+                return nil
+            }
+
+            return dateKey(for: monthDate)
+        }
+    }
+
+    func dayNumber(for dateKey: String) -> Int? {
+        guard let date = date(from: dateKey) else {
+            return nil
+        }
+
+        return calendar.component(.day, from: date)
+    }
+
+    func monthTitle(containing date: Date) -> String {
+        let components = calendar.dateComponents([.year, .month], from: date)
+        guard let year = components.year,
+              let month = components.month else {
+            return ""
+        }
+
+        return String(format: "%04d.%02d", year, month)
+    }
+
+    func leadingBlankDayCount(containing date: Date) -> Int {
+        guard let interval = calendar.dateInterval(of: .month, for: date) else {
+            return 0
+        }
+
+        let weekday = calendar.component(.weekday, from: interval.start)
+        return (weekday - calendar.firstWeekday + 7) % 7
+    }
+
+    func compare(_ leftDateKey: String, _ rightDateKey: String) -> ComparisonResult? {
+        guard let leftDate = date(from: leftDateKey),
+              let rightDate = date(from: rightDateKey) else {
+            return nil
+        }
+
+        return calendar.compare(leftDate, to: rightDate, toGranularity: .day)
+    }
 }
 
 extension Calendar {
     static var devStreakCurrent: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .autoupdatingCurrent
+        calendar.firstWeekday = 2
         return calendar
     }
 }

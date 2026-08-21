@@ -677,6 +677,136 @@ Settings 화면에서 다음을 관리한다.
 - Claude hand-off
 - Clipboard prompt generation
 
+### Idea Inbox Rules
+
+Idea는 개발 글감을 빠르게 저장하기 위한 lightweight local item이다.
+
+Idea model:
+
+- id
+- title
+- notes
+- tags
+- createdAt
+- updatedAt
+- status
+
+status:
+
+- inbox
+- used
+- archived
+
+필수 동작:
+
+- 새 Idea 추가
+- Idea 수정
+- Idea 삭제
+- archived 처리
+- archived 복구 가능
+- used 상태 처리 가능
+- 생성일/수정일 유지
+
+### Tag Rules
+
+- 하나의 Idea에 여러 tag 저장 가능
+- tag는 간단한 문자열 목록
+- Phase 3에서는 별도 Tag entity/table을 만들지 않는다.
+- 중복 tag는 저장하지 않는다.
+- 앞뒤 공백 제거
+- 빈 tag 저장 금지
+
+### Claude Hand-off Rules
+
+Claude API를 앱에 직접 연결하지 않는다.
+
+Idea에서 "Write with Claude"를 실행하면:
+
+1. 해당 Idea의 title / notes / tags를 기반으로 prompt 생성
+2. prompt를 clipboard에 복사
+3. 가능한 경우 Claude 앱 또는 웹으로 이동할 수 있는 action 제공
+
+Prompt 기본 구조:
+
+Dev Archive에 다음 주제로 글을 작성하려고 합니다.
+
+주제:
+{title}
+
+메모:
+{notes}
+
+태그:
+{tags}
+
+CONVENTIONS.md와 DESIGN_RULES.md의 규칙을 따라주세요.
+기존 Dev Archive의 글 스타일과 구조도 참고해주세요.
+
+중요:
+
+- 앱은 Claude에게 prompt를 전달하는 역할만 한다.
+- Claude API 호출은 하지 않는다.
+- 블로그 repository를 직접 수정하지 않는다.
+- GitHub write는 하지 않는다.
+
+### Used Rules
+
+Write with Claude 실행만으로 자동 used 처리하지 않는다.
+
+사용자가 명시적으로:
+
+- "작성에 사용함"
+
+또는 이에 해당하는 action을 수행했을 때만 status = used
+
+이유:
+Claude로 넘겼다고 실제 글을 작성했다고 보장할 수 없기 때문이다.
+
+### Relationship with Daily Goal
+
+Phase 3에서는 Idea 생성만으로 Daily Goal을 완료 처리하지 않는다.
+
+Daily Goal은 기존 manual completion / 향후 GitHub verified 기준을 유지한다.
+
+Idea는 글쓰기 준비 단계일 뿐이다.
+
+### Idea Inbox UI
+
+Dashboard에서 Idea Inbox로 진입할 수 있어야 한다.
+
+Idea Inbox 기본 구조:
+
+- Inbox
+- Used
+- Archived
+
+Phase 3에서는 복잡한 검색/필터 기능은 구현하지 않는다.
+
+Idea 작성 화면:
+
+- Title
+- Notes
+- Tags
+- Save
+
+Idea 상세/수정 화면:
+
+- 수정
+- Archive
+- Delete
+- Write with Claude
+- Mark as Used
+
+디자인 refinement는 나중에 진행한다.
+
+### Idea Persistence
+
+현재 SwiftData 구조를 활용한다.
+
+Idea는 SwiftData @Model로 저장한다.
+
+기존 DailyRecord persistence와 충돌하지 않도록 ModelContainer schema에 Idea를 추가한다.
+
 ## Phase 4 — Widget
 
 - Small Widget

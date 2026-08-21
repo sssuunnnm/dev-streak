@@ -92,6 +92,15 @@ struct DashboardView: View {
                         }
                     }
 
+                    NavigationLink {
+                        IdeaInboxView()
+                    } label: {
+                        Label("Idea Inbox", systemImage: "lightbulb")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+
                     CalendarMonthView(records: records, now: now)
 
                     if let saveErrorMessage {
@@ -182,5 +191,5 @@ struct DashboardView: View {
 
 #Preview {
     DashboardView()
-        .modelContainer(for: DailyRecord.self, inMemory: true)
+        .modelContainer(for: [DailyRecord.self, Idea.self], inMemory: true)
 }

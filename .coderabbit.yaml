@@ -1,0 +1,49 @@
+# ==========================================================
+# CodeRabbit Configuration
+# https://docs.coderabbit.ai/
+# ==========================================================
+
+# 리뷰 및 채팅 언어
+language: "ko-KR"
+
+# Early Access 기능 사용 여부
+# true : 실험 기능 사용
+# false: 안정 버전만 사용 (추천)
+early_access: false
+
+reviews:
+  # 리뷰 스타일
+  # chill   : 비교적 관대한 리뷰
+  # assertive : 조금 더 적극적인 리뷰
+  profile: "chill"
+
+  # 리뷰 완료 후 CodeRabbit가 Approve / Request Changes 워크플로우 사용
+  request_changes_workflow: true
+
+  # PR 전체 요약 생성
+  high_level_summary: true
+
+  # 리뷰 마지막에 시 한 편 출력 (취향)
+  poem: true
+
+  # 리뷰 진행 상태 표시
+  review_status: true
+
+  # 리뷰 내용을 접지 않고 모두 표시
+  collapse_walkthrough: false
+
+  auto_review:
+    # PR 생성 시 자동 리뷰
+    enabled: true
+
+    # Draft(WIP) PR은 자동 리뷰하지 않음
+    drafts: false
+
+    # ⭐ 가장 중요한 설정
+    # false : 커밋을 여러 번 Push해도 자동 리뷰하지 않음 (추천)
+    # true  : Push할 때마다 자동 리뷰 → 리뷰 횟수 빠르게 소모
+    auto_incremental_review: false
+
+chat:
+  # CodeRabbit 채팅 자동 응답
+  auto_reply: true

@@ -5,14 +5,22 @@
 //  Created by Codex on 8/22/26.
 //
 
+import SwiftData
 import SwiftUI
 
 struct GitHubConnectionSettingsView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \DailyRecord.dateKey, order: .reverse) private var records: [DailyRecord]
+    @Query(sort: \Idea.updatedAt, order: .reverse) private var ideas: [Idea]
+
     private let credentialStore = GitHubCredentialStore()
+    private let backfillService = GitHubBackfillService()
 
     @State private var token = ""
     @State private var hasSavedToken = false
     @State private var connectionState = GitHubConnectionState.idle
+    @State private var backfillState = GitHubBackfillViewState.idle
+    @State private var isBackfillConfirmationPresented = false
 
     var body: some View {
         Form {
@@ -57,11 +65,47 @@ struct GitHubConnectionSettingsView: View {
             } footer: {
                 Text("sssuunnnm/dev-archive 읽기 권한만 사용합니다. 토큰은 Keychain에만 저장됩니다.")
             }
+
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("과거 기록 동기화")
+                        .font(DesignTokens.Typography.headline)
+                        .foregroundStyle(DesignTokens.Color.primaryText)
+
+                    Text("GitHub의 기술 블로그 기록을 확인해 이전 작성일을 캘린더에 반영합니다.")
+                        .font(DesignTokens.Typography.subheadline)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 2)
+
+                Button("최근 30일 동기화") {
+                    isBackfillConfirmationPresented = true
+                }
+                .disabled(backfillState == .syncing)
+
+                Text(backfillState.message)
+                    .font(DesignTokens.Typography.footnote)
+                    .foregroundStyle(backfillState.tint)
+            }
         }
         .navigationTitle("GitHub 연결")
         .font(DesignTokens.Typography.body)
         .task {
             refreshSavedState()
+        }
+        .confirmationDialog(
+            "최근 30일의 GitHub 기록을 확인할까요?",
+            isPresented: $isBackfillConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button("동기화") {
+                runBackfill()
+            }
+
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("기술 블로그 콘텐츠 변경이 확인된 날짜를 완료 기록으로 추가합니다. 기존 기록은 삭제되지 않습니다.")
         }
     }
 
@@ -113,6 +157,93 @@ struct GitHubConnectionSettingsView: View {
 
                 refreshSavedState()
             }
+        }
+    }
+
+    private func runBackfill() {
+        backfillState = .syncing
+
+        Task {
+            let result = await backfillService.backfill(
+                records: records,
+                ideas: ideas,
+                modelContext: modelContext,
+                now: Date()
+            )
+
+            await MainActor.run {
+                switch result {
+                case .success(let backfillResult):
+                    backfillState = backfillResult.changedDayCount > 0
+                        ? .completed(changedDayCount: backfillResult.changedDayCount)
+                        : .completedWithoutChanges
+                case .failure(let failure):
+                    backfillState = .failed(failure)
+                }
+
+                refreshSavedState()
+            }
+        }
+    }
+}
+
+private enum GitHubBackfillViewState: Equatable {
+    case idle
+    case syncing
+    case completed(changedDayCount: Int)
+    case completedWithoutChanges
+    case failed(GitHubBackfillFailure)
+
+    var message: String {
+        switch self {
+        case .idle:
+            return "최근 30일 범위로 확인합니다."
+        case .syncing:
+            return "GitHub 기록 확인 중..."
+        case .completed(let changedDayCount):
+            return "\(changedDayCount)일의 기록을 동기화했습니다."
+        case .completedWithoutChanges:
+            return "새로 반영할 기록이 없습니다."
+        case .failed(.verification(let failure)):
+            return failure.backfillMessage
+        case .failed(.saveFailed):
+            return "동기화 결과를 저장하지 못했습니다."
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .completed, .completedWithoutChanges:
+            return DesignTokens.Color.success
+        case .syncing:
+            return DesignTokens.Color.accent
+        case .idle:
+            return DesignTokens.Color.textSecondary
+        case .failed:
+            return DesignTokens.Color.warning
+        }
+    }
+}
+
+private extension GitHubVerificationFailure {
+    var backfillMessage: String {
+        switch self {
+        case .rateLimited(let diagnostics):
+            if let resetAt = diagnostics?.resetAt {
+                return "\(resetAt.formatted(date: .omitted, time: .shortened)) 이후 다시 확인해 주세요."
+            }
+
+            return "GitHub 요청 한도에 도달했습니다."
+        case .unauthorizedOrForbidden:
+            return "GitHub 연결을 다시 확인해 주세요."
+        case .notFound:
+            return "dev-archive 저장소 접근 권한을 확인해 주세요."
+        case .networkFailure:
+            return "네트워크 연결을 확인해 주세요."
+        case .budgetExceeded:
+            return "GitHub 기록이 많아 동기화를 완료하지 못했습니다."
+        case .decodingFailure, .unknown:
+            return "동기화를 완료하지 못했습니다."
         }
     }
 }

@@ -482,21 +482,24 @@ private struct GitHubVerificationRow<SettingsDestination: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: state.symbolName)
-                .font(.system(size: 16, weight: .medium))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(state.tint)
-                .frame(width: 22)
-                .symbolEffect(.rotate, options: .repeating, value: state == .checking)
-
             VStack(alignment: .leading, spacing: 2) {
                 Text("GitHub 기록 확인")
                     .font(DesignTokens.Typography.captionStrong)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
 
-                Text(state.message(isTodayCompleted: isTodayCompleted))
-                    .font(DesignTokens.Typography.footnote)
-                    .foregroundStyle(DesignTokens.Color.textSecondary)
+                HStack(spacing: 5) {
+                    Text(state.message(isTodayCompleted: isTodayCompleted))
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+
+                    if let symbolName = state.statusSymbolName {
+                        Image(systemName: symbolName)
+                            .font(.system(size: 11, weight: .medium))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(state.tint)
+                            .symbolEffect(.rotate, options: .repeating, value: state == .checking)
+                    }
+                }
             }
 
             Spacer()
@@ -591,16 +594,14 @@ private enum GitHubVerificationViewState: Equatable {
         }
     }
 
-    var symbolName: String {
+    var statusSymbolName: String? {
         switch self {
-        case .idle:
-            return "checkmark.seal"
+        case .idle, .noActivity:
+            return nil
         case .checking:
             return "arrow.triangle.2.circlepath"
         case .verified:
-            return "checkmark.seal.fill"
-        case .noActivity:
-            return "smallcircle.filled.circle"
+            return "checkmark.circle.fill"
         case .failure, .unableToCheck:
             return "exclamationmark.circle"
         }

@@ -245,6 +245,48 @@ struct GitHubVerificationServiceTests {
         #expect(result == .success(GitHubVerificationResult(verifiedDateKeys: [])))
     }
 
+    @Test func dashboardVerificationKeepsSevenDayLookback() async {
+        let client = FakeGitHubAPIClient()
+        client.mainCommitPages = [
+            GitHubPage(values: [Self.commit("old-content", "2026-08-14")], hasNextPage: false)
+        ]
+        client.details["old-content"] = GitHubCommitDetail(
+            sha: "old-content",
+            filenames: ["src/content/articles/old.md"]
+        )
+
+        let result = await Self.service(
+            client: client,
+            maxRequests: nil,
+            lookbackDays: GitHubVerificationDefaults.dashboardLookbackDays
+        )
+        .verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .success(GitHubVerificationResult(verifiedDateKeys: [])))
+        #expect(client.detailSHAs.isEmpty)
+    }
+
+    @Test func thirtyDayBackfillCanVerifyDatesBeforeDashboardLookback() async {
+        let client = FakeGitHubAPIClient()
+        client.mainCommitPages = [
+            GitHubPage(values: [Self.commit("old-content", "2026-08-03")], hasNextPage: false)
+        ]
+        client.details["old-content"] = GitHubCommitDetail(
+            sha: "old-content",
+            filenames: ["src/content/snippets/sql-date-format.md"]
+        )
+
+        let result = await Self.service(
+            client: client,
+            maxRequests: GitHubVerificationDefaults.authenticatedBackfillRequestLimit,
+            lookbackDays: GitHubVerificationDefaults.backfillLookbackDays
+        )
+        .verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .success(GitHubVerificationResult(verifiedDateKeys: ["2026-08-03"])))
+        #expect(client.detailSHAs == ["old-content"])
+    }
+
     @Test func detailCacheAvoidsRepeatedRequestForSameSHAAcrossRuns() async throws {
         let client = FakeGitHubAPIClient()
         let cache = GitHubCommitDetailCache()
@@ -264,13 +306,14 @@ struct GitHubVerificationServiceTests {
         client: FakeGitHubAPIClient,
         cache: GitHubCommitDetailCache = GitHubCommitDetailCache(),
         maxRequests: Int? = 20,
-        credentialStore: GitHubCredentialStore = GitHubCredentialStore(tokenStore: FakeGitHubTokenStore())
+        credentialStore: GitHubCredentialStore = GitHubCredentialStore(tokenStore: FakeGitHubTokenStore()),
+        lookbackDays: Int = 7
     ) -> GitHubVerificationService {
         GitHubVerificationService(
             client: client,
             dateService: DateService(calendar: calendar),
             detailCache: cache,
-            lookbackDays: 7,
+            lookbackDays: lookbackDays,
             maxRequestsPerVerification: maxRequests,
             credentialStore: credentialStore
         )

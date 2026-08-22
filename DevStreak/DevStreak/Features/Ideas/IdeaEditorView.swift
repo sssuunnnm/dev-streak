@@ -38,7 +38,7 @@ struct IdeaEditorView: View {
         Form {
             Section {
                 TextField("제목", text: $title)
-                    .font(.title3.weight(.semibold))
+                    .font(DesignTokens.Typography.title3)
             } header: {
                 Text("제목")
             }
@@ -66,6 +66,7 @@ struct IdeaEditorView: View {
             }
         }
         .navigationTitle(idea == nil ? "새 Idea" : "Idea 수정")
+        .font(DesignTokens.Typography.body)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("취소") {

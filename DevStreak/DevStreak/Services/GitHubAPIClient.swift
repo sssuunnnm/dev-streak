@@ -32,6 +32,8 @@ struct GitHubRateLimitDiagnostics: Equatable {
 
 enum GitHubAPIError: Error, Equatable {
     case rateLimited(GitHubRateLimitDiagnostics?)
+    case unauthorized
+    case forbidden
     case unauthorizedOrForbidden
     case notFound
     case networkFailure
@@ -53,12 +55,19 @@ struct GitHubCommitDetail: Equatable {
     let filenames: [String]
 }
 
+struct GitHubRepositorySummary: Equatable {
+    let fullName: String
+    let defaultBranch: String
+    let isPrivate: Bool
+}
+
 struct GitHubPage<Value: Equatable>: Equatable {
     let values: [Value]
     let hasNextPage: Bool
 }
 
 protocol GitHubAPIClientProtocol {
+    func repository(owner: String, repository: String) async throws -> GitHubRepositorySummary
     func commits(owner: String, repository: String, ref: String, since: Date?, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary>
     func openPullRequests(owner: String, repository: String, perPage: Int, page: Int) async throws -> GitHubPage<GitHubPullRequest>
     func pullRequestCommits(owner: String, repository: String, number: Int, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary>
@@ -80,6 +89,16 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         self.session = session
         self.authorizationHeaderProvider = authorizationHeaderProvider
         self.dateFormatter = ISO8601DateFormatter()
+    }
+
+    func repository(owner: String, repository: String) async throws -> GitHubRepositorySummary {
+        let request = try request(path: "/repos/\(owner)/\(repository)", queryItems: [])
+        let dto: GitHubRepositoryDTO = try await loadObject(request)
+        return GitHubRepositorySummary(
+            fullName: dto.fullName,
+            defaultBranch: dto.defaultBranch,
+            isPrivate: dto.isPrivate
+        )
     }
 
     func commits(owner: String, repository: String, ref: String, since: Date?, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary> {
@@ -125,7 +144,8 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
 
     func commitDetail(owner: String, repository: String, sha: String) async throws -> GitHubCommitDetail {
         let request = try request(path: "/repos/\(owner)/\(repository)/commits/\(sha)", queryItems: [])
-        return try await loadObject(request)
+        let dto: GitHubCommitDetailDTO = try await loadObject(request)
+        return GitHubCommitDetail(sha: dto.sha, filenames: dto.files.map(\.filename))
     }
 
     private func request(path: String, queryItems: [URLQueryItem]) throws -> URLRequest {
@@ -152,7 +172,7 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         return request
     }
 
-    private func loadObject(_ request: URLRequest) async throws -> GitHubCommitDetail {
+    private func loadObject<T: Decodable>(_ request: URLRequest) async throws -> T {
         let data: Data
         let response: URLResponse
 
@@ -165,8 +185,7 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         try validate(response: response)
 
         do {
-            let dto = try JSONDecoder().decode(GitHubCommitDetailDTO.self, from: data)
-            return GitHubCommitDetail(sha: dto.sha, filenames: dto.files.map(\.filename))
+            return try JSONDecoder().decode(T.self, from: data)
         } catch {
             throw GitHubAPIError.decodingFailure
         }
@@ -201,11 +220,13 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         switch httpResponse.statusCode {
         case 200..<300:
             return httpResponse
-        case 401, 403:
+        case 401:
+            throw GitHubAPIError.unauthorized
+        case 403:
             if httpResponse.value(forHTTPHeaderField: "X-RateLimit-Remaining") == "0" {
                 throw GitHubAPIError.rateLimited(GitHubRateLimitDiagnostics(response: httpResponse))
             }
-            throw GitHubAPIError.unauthorizedOrForbidden
+            throw GitHubAPIError.forbidden
         case 404:
             throw GitHubAPIError.notFound
         default:
@@ -254,6 +275,18 @@ private struct GitHubCommitSummaryDTO: Decodable, Equatable {
 
 private struct GitHubPullRequestDTO: Decodable, Equatable {
     let number: Int
+}
+
+private struct GitHubRepositoryDTO: Decodable {
+    let fullName: String
+    let defaultBranch: String
+    let isPrivate: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case fullName = "full_name"
+        case defaultBranch = "default_branch"
+        case isPrivate = "private"
+    }
 }
 
 private struct GitHubCommitDetailDTO: Decodable {

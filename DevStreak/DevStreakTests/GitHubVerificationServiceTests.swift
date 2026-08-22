@@ -264,6 +264,18 @@ final class FakeGitHubAPIClient: GitHubAPIClientProtocol {
         + detailSHAs.count
     }
 
+    func repository(owner: String, repository: String) async throws -> GitHubRepositorySummary {
+        if let error {
+            throw error
+        }
+
+        return GitHubRepositorySummary(
+            fullName: "\(owner)/\(repository)",
+            defaultBranch: "main",
+            isPrivate: false
+        )
+    }
+
     func commits(owner: String, repository: String, ref: String, since: Date?, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary> {
         if let error {
             throw error

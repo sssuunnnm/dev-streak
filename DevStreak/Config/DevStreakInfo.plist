@@ -31,6 +31,13 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Paperlogy-4Regular.ttf</string>
+		<string>Paperlogy-5Medium.ttf</string>
+		<string>Paperlogy-6SemiBold.ttf</string>
+		<string>Paperlogy-7Bold.ttf</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

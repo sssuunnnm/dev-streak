@@ -57,16 +57,17 @@ struct DashboardView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    DashboardHeader()
+                    DashboardHeader {
+                        ReminderSettingsView(isTodayCompleted: isTodayCompleted)
+                    }
 
                     PrimaryGoalCard(
                         dateKey: todayKey,
                         isCompleted: isTodayCompleted,
+                        currentStreak: currentStreak,
+                        bestStreak: bestStreak,
                         completionSource: completionSourceText,
                         verificationState: githubVerificationState,
-                        reminderDestination: {
-                            ReminderSettingsView(isTodayCompleted: isTodayCompleted)
-                        },
                         gitHubSettingsDestination: {
                             GitHubConnectionSettingsView()
                         },
@@ -76,7 +77,8 @@ struct DashboardView: View {
                         refreshAction: verifyGitHubActivity
                     )
 
-                    StreakSummaryCard(currentStreak: currentStreak, bestStreak: bestStreak)
+                    Divider()
+                        .overlay(DesignTokens.Color.hairline)
 
                     NavigationLink {
                         IdeaInboxView()
@@ -89,12 +91,13 @@ struct DashboardView: View {
 
                     if let saveErrorMessage {
                         Text(saveErrorMessage)
-                            .font(.footnote)
+                            .font(DesignTokens.Typography.footnote)
                             .foregroundStyle(.red)
                     }
                 }
                 .padding(DesignTokens.Spacing.page)
             }
+            .font(DesignTokens.Typography.body)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
             .task {
@@ -304,30 +307,48 @@ struct DashboardView: View {
     }
 }
 
-private struct DashboardHeader: View {
+private struct DashboardHeader<ReminderDestination: View>: View {
+    let reminderDestination: ReminderDestination
+
+    init(@ViewBuilder reminderDestination: () -> ReminderDestination) {
+        self.reminderDestination = reminderDestination()
+    }
+
     var body: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("DevStreak")
-                    .font(.largeTitle.weight(.bold))
+                    .font(DesignTokens.Typography.title)
                     .foregroundStyle(DesignTokens.Color.primaryText)
 
                 Text("기술 기록을 꾸준히 쌓는 공간")
-                    .font(.subheadline)
+                    .font(DesignTokens.Typography.subheadline)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
             }
 
             Spacer()
+
+            NavigationLink {
+                reminderDestination
+            } label: {
+                Image(systemName: "bell")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("알림 설정")
         }
     }
 }
 
-private struct PrimaryGoalCard<ReminderDestination: View, GitHubSettingsDestination: View>: View {
+private struct PrimaryGoalCard<GitHubSettingsDestination: View>: View {
     let dateKey: String
     let isCompleted: Bool
+    let currentStreak: Int
+    let bestStreak: Int
     let completionSource: String
     let verificationState: GitHubVerificationViewState
-    let reminderDestination: ReminderDestination
     let gitHubSettingsDestination: GitHubSettingsDestination
     let writeAction: () -> Void
     let refreshAction: () -> Void
@@ -335,18 +356,20 @@ private struct PrimaryGoalCard<ReminderDestination: View, GitHubSettingsDestinat
     init(
         dateKey: String,
         isCompleted: Bool,
+        currentStreak: Int,
+        bestStreak: Int,
         completionSource: String,
         verificationState: GitHubVerificationViewState,
-        @ViewBuilder reminderDestination: () -> ReminderDestination,
         @ViewBuilder gitHubSettingsDestination: () -> GitHubSettingsDestination,
         writeAction: @escaping () -> Void,
         refreshAction: @escaping () -> Void
     ) {
         self.dateKey = dateKey
         self.isCompleted = isCompleted
+        self.currentStreak = currentStreak
+        self.bestStreak = bestStreak
         self.completionSource = completionSource
         self.verificationState = verificationState
-        self.reminderDestination = reminderDestination()
         self.gitHubSettingsDestination = gitHubSettingsDestination()
         self.writeAction = writeAction
         self.refreshAction = refreshAction
@@ -354,54 +377,32 @@ private struct PrimaryGoalCard<ReminderDestination: View, GitHubSettingsDestinat
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .center) {
+            HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.tight) {
                     Text("오늘")
-                        .font(.headline)
+                        .font(DesignTokens.Typography.headline)
                         .foregroundStyle(DesignTokens.Color.primaryText)
 
                     Text(dateKey)
-                        .font(.subheadline)
+                        .font(DesignTokens.Typography.subheadline)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                 }
+                .layoutPriority(1)
 
                 Spacer()
 
-                NavigationLink {
-                    reminderDestination
-                } label: {
-                    Image(systemName: "bell")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(DesignTokens.Color.accent)
-                        .frame(width: 34, height: 34)
-                        .background {
-                            RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
-                                .fill(DesignTokens.Color.surface)
-                        }
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("알림 설정")
+                StreakInlineMetrics(currentStreak: currentStreak, bestStreak: bestStreak)
             }
 
             VStack(alignment: .leading, spacing: 5) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    if isCompleted {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 24, weight: .semibold))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(DesignTokens.Color.success)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-
-                    Text(isCompleted ? "1 / 1" : "0 / 1")
-                        .font(.system(size: 49, weight: .bold, design: .default))
-                        .foregroundStyle(DesignTokens.Color.primaryText)
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                }
+                Text(isCompleted ? "1 / 1" : "0 / 1")
+                    .font(DesignTokens.Typography.heroMetric)
+                    .foregroundStyle(DesignTokens.Color.primaryText)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
 
                 Text(isCompleted ? completionSource : "짧게라도 하나 남기면 오늘의 기록이 이어집니다.")
-                    .font(.subheadline)
+                    .font(DesignTokens.Typography.subheadline)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
             }
 
@@ -420,11 +421,42 @@ private struct PrimaryGoalCard<ReminderDestination: View, GitHubSettingsDestinat
                 },
                 refreshAction: refreshAction
             )
-
-            Divider()
-                .overlay(DesignTokens.Color.hairline)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isCompleted)
+    }
+}
+
+private struct StreakInlineMetrics: View {
+    let currentStreak: Int
+    let bestStreak: Int
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .trailing, spacing: DesignTokens.Spacing.tight) {
+                Text("연속 기록")
+                    .font(DesignTokens.Typography.captionStrong)
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
+
+                Text("\(currentStreak)일")
+                    .font(DesignTokens.Typography.title3)
+                    .monospacedDigit()
+                    .foregroundStyle(DesignTokens.Color.primaryText)
+            }
+
+            VStack(alignment: .trailing, spacing: DesignTokens.Spacing.tight) {
+                Text("최고 기록")
+                    .font(DesignTokens.Typography.captionStrong)
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
+
+                Text("\(bestStreak)일")
+                    .font(DesignTokens.Typography.subheadline)
+                    .monospacedDigit()
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
+            }
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.82)
     }
 }
 
@@ -433,6 +465,8 @@ private struct GitHubVerificationRow<SettingsDestination: View>: View {
     let isTodayCompleted: Bool
     let settingsDestination: SettingsDestination
     let refreshAction: () -> Void
+
+    @State private var isHelpPresented = false
 
     init(
         state: GitHubVerificationViewState,
@@ -457,22 +491,38 @@ private struct GitHubVerificationRow<SettingsDestination: View>: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("GitHub 기록 확인")
-                    .font(.caption.weight(.semibold))
+                    .font(DesignTokens.Typography.captionStrong)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
 
                 Text(state.message(isTodayCompleted: isTodayCompleted))
-                    .font(.footnote)
+                    .font(DesignTokens.Typography.footnote)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
             }
 
             Spacer()
+
+            Button {
+                isHelpPresented = true
+            } label: {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 15, weight: .medium))
+                    .frame(width: 30, height: 34)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(DesignTokens.Color.textSecondary)
+            .accessibilityLabel("GitHub 기록 확인 도움말")
+            .sheet(isPresented: $isHelpPresented) {
+                NavigationStack {
+                    GitHubVerificationHelpView()
+                }
+            }
 
             NavigationLink {
                 settingsDestination
             } label: {
                 Image(systemName: "key")
                     .font(.system(size: 14, weight: .semibold))
-                    .frame(width: 34, height: 34)
+                    .frame(width: 30, height: 34)
             }
             .buttonStyle(.plain)
             .foregroundStyle(DesignTokens.Color.textSecondary)
@@ -481,56 +531,13 @@ private struct GitHubVerificationRow<SettingsDestination: View>: View {
             Button(action: refreshAction) {
                 Image(systemName: "arrow.clockwise")
                     .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 34, height: 34)
+                    .frame(width: 30, height: 34)
             }
             .buttonStyle(.plain)
             .foregroundStyle(DesignTokens.Color.accent)
             .contentShape(Rectangle())
             .scaleEffect(state == .checking ? 0.96 : 1)
             .disabled(state == .checking)
-        }
-    }
-}
-
-private struct StreakSummaryCard: View {
-    let currentStreak: Int
-    let bestStreak: Int
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.tight) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "flame.fill")
-                            .font(.caption2.weight(.medium))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(DesignTokens.Color.streakWarm)
-                            .opacity(0.75)
-
-                        Text("연속 기록")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(DesignTokens.Color.textSecondary)
-                    }
-
-                    Text("\(currentStreak)일")
-                        .font(DesignTokens.Typography.roundedMetric)
-                        .foregroundStyle(DesignTokens.Color.primaryText)
-                        .monospacedDigit()
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: DesignTokens.Spacing.tight) {
-                    Text("최고 기록")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(DesignTokens.Color.textSecondary)
-
-                    Text("\(bestStreak)일")
-                        .font(.headline)
-                        .monospacedDigit()
-                        .foregroundStyle(DesignTokens.Color.textSecondary)
-                }
-            }
         }
     }
 }
@@ -548,11 +555,11 @@ private struct IdeaInboxSummaryCard: View {
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.tight) {
                 Text("Idea Inbox")
-                    .font(.headline)
+                    .font(DesignTokens.Typography.headline)
                     .foregroundStyle(DesignTokens.Color.primaryText)
 
                 Text("\(waitingCount)개 대기 중")
-                    .font(.subheadline)
+                    .font(DesignTokens.Typography.subheadline)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
                     .monospacedDigit()
             }
@@ -560,7 +567,7 @@ private struct IdeaInboxSummaryCard: View {
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
+                .font(DesignTokens.Typography.captionStrong)
                 .foregroundStyle(DesignTokens.Color.textSecondary)
         }
         .padding(.vertical, 4)

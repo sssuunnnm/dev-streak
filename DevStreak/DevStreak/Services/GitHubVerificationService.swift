@@ -248,7 +248,7 @@ struct GitHubVerificationService {
         switch error {
         case .rateLimited(let diagnostics):
             return .rateLimited(diagnostics)
-        case .unauthorizedOrForbidden:
+        case .unauthorized, .forbidden, .unauthorizedOrForbidden:
             return .unauthorizedOrForbidden
         case .notFound:
             return .notFound

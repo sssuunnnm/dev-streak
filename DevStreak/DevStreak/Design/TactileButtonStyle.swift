@@ -13,7 +13,7 @@ struct TactileButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
+            .font(DesignTokens.Typography.headline)
             .foregroundStyle(isProminent ? .white : tint)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)

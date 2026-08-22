@@ -39,6 +39,7 @@ struct ReminderSettingsView: View {
             }
         }
         .navigationTitle("알림 설정")
+        .font(DesignTokens.Typography.body)
         .task {
             settings = store.load()
             await refreshAuthorizationStatus()
@@ -150,12 +151,12 @@ private struct PermissionStatusCard: View {
                     .foregroundStyle(tint)
 
                 Text("알림 권한")
-                    .font(.headline)
+                    .font(DesignTokens.Typography.headline)
                     .foregroundStyle(DesignTokens.Color.primaryText)
             }
 
             Text(message)
-                .font(.subheadline)
+                .font(DesignTokens.Typography.subheadline)
                 .foregroundStyle(DesignTokens.Color.textSecondary)
 
             switch status {
@@ -212,11 +213,11 @@ private struct ReminderPreferenceRow: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(slot.title)
-                        .font(.headline)
+                        .font(DesignTokens.Typography.headline)
                         .foregroundStyle(DesignTokens.Color.primaryText)
 
                     Text(timeText)
-                        .font(.caption)
+                        .font(DesignTokens.Typography.caption)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                 }
 
@@ -230,6 +231,7 @@ private struct ReminderPreferenceRow: View {
                 .disabled(!isEnabled)
         }
         .padding(.vertical, 6)
+        .font(DesignTokens.Typography.body)
     }
 
     private var timeText: String {

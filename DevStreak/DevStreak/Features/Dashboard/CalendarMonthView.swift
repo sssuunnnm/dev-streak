@@ -41,11 +41,11 @@ struct CalendarMonthView: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("이번 달")
-                        .font(.headline)
+                        .font(DesignTokens.Typography.headline)
                         .foregroundStyle(DesignTokens.Color.primaryText)
 
                     Text(dateService.monthTitle(containing: now))
-                        .font(.caption)
+                        .font(DesignTokens.Typography.caption)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                 }
 
@@ -53,7 +53,7 @@ struct CalendarMonthView: View {
 
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(rateText)
-                        .font(.headline.weight(.semibold))
+                        .font(DesignTokens.Typography.headline)
                         .monospacedDigit()
                         .foregroundStyle(DesignTokens.Color.accent)
                         .padding(.horizontal, 9)
@@ -64,7 +64,7 @@ struct CalendarMonthView: View {
                         }
 
                     Text("\(monthlyRate.eligibleDays)일 중 \(monthlyRate.completedDays)일 기록")
-                        .font(.caption2)
+                        .font(DesignTokens.Typography.caption)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                         .monospacedDigit()
                 }
@@ -73,7 +73,7 @@ struct CalendarMonthView: View {
             LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(weekdaySymbols.indices, id: \.self) { index in
                     Text(weekdaySymbols[index])
-                        .font(.caption2.weight(.semibold))
+                        .font(DesignTokens.Typography.captionStrong)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                         .frame(maxWidth: .infinity)
                 }
@@ -104,7 +104,7 @@ private struct CalendarDayCell: View {
                 }
 
             Text("\(day.dayNumber)")
-                .font(.caption2.weight(.semibold))
+                .font(DesignTokens.Typography.captionStrong)
                 .monospacedDigit()
                 .foregroundStyle(foregroundStyle)
         }

@@ -26,7 +26,7 @@ struct IdeaDetailView: View {
         List {
             Section {
                 Text(idea.title)
-                    .font(.title2.weight(.bold))
+                    .font(DesignTokens.Typography.roundedMetric)
                     .foregroundStyle(DesignTokens.Color.primaryText)
                     .padding(.vertical, 4)
             } header: {
@@ -93,12 +93,13 @@ struct IdeaDetailView: View {
             if let actionMessage {
                 Section {
                     Text(actionMessage)
-                        .font(.footnote)
+                        .font(DesignTokens.Typography.footnote)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                 }
             }
         }
         .navigationTitle("Idea")
+        .font(DesignTokens.Typography.body)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {

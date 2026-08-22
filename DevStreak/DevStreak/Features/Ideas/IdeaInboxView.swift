@@ -61,6 +61,7 @@ struct IdeaInboxView: View {
             .listStyle(.plain)
         }
         .navigationTitle("Idea Inbox")
+        .font(DesignTokens.Typography.body)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -122,13 +123,13 @@ private struct IdeaRowView: View {
                     .foregroundStyle(idea.status.tint)
 
                 Text(idea.title)
-                    .font(.headline)
+                    .font(DesignTokens.Typography.headline)
                     .foregroundStyle(DesignTokens.Color.primaryText)
             }
 
             if !idea.notes.isEmpty {
                 Text(idea.notes)
-                    .font(.subheadline)
+                    .font(DesignTokens.Typography.subheadline)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
                     .lineLimit(2)
             }
@@ -152,7 +153,7 @@ struct TagChip: View {
 
     var body: some View {
         Text(title)
-            .font(.caption.weight(.medium))
+            .font(DesignTokens.Typography.caption)
             .foregroundStyle(DesignTokens.Color.textSecondary)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)

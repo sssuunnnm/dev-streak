@@ -10,12 +10,22 @@ import SwiftUI
 
 struct IdeaInboxView: View {
     @Query(sort: \Idea.updatedAt, order: .reverse) private var ideas: [Idea]
+    @Query(sort: \DailyRecord.dateKey, order: .reverse) private var records: [DailyRecord]
 
     @State private var selectedStatus = IdeaStatus.inbox
     @State private var isShowingNewIdea = false
 
+    private let widgetSnapshotService = WidgetSnapshotService()
+
     private var filteredIdeas: [Idea] {
         ideas.filter { $0.status == selectedStatus }
+    }
+
+    private var widgetRefreshSignature: String {
+        ideas
+            .map { "\($0.id.uuidString):\($0.statusRawValue)" }
+            .sorted()
+            .joined(separator: "|")
     }
 
     var body: some View {
@@ -62,6 +72,12 @@ struct IdeaInboxView: View {
                 IdeaEditorView()
             }
         }
+        .task {
+            refreshWidgetSnapshot()
+        }
+        .onChange(of: widgetRefreshSignature) { _, _ in
+            refreshWidgetSnapshot()
+        }
     }
 
     private var emptyMessage: String {
@@ -73,6 +89,10 @@ struct IdeaInboxView: View {
         case .archived:
             "No archived ideas yet."
         }
+    }
+
+    private func refreshWidgetSnapshot() {
+        widgetSnapshotService.updateSnapshot(records: records, ideas: ideas)
     }
 }
 
@@ -106,5 +126,5 @@ private struct IdeaRowView: View {
     NavigationStack {
         IdeaInboxView()
     }
-    .modelContainer(for: Idea.self, inMemory: true)
+    .modelContainer(for: [DailyRecord.self, Idea.self], inMemory: true)
 }

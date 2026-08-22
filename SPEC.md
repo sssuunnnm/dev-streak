@@ -815,6 +815,79 @@ Idea는 SwiftData @Model로 저장한다.
 - Write shortcut
 - App Group
 
+### Widget MVP Rules
+
+Phase 4의 MVP는 Small Widget만 구현한다.
+
+Small Widget 표시 정보:
+
+- Today 0 / 1 또는 ✓ 1 / 1
+- Current streak
+- Write shortcut
+
+Medium Widget은 Phase 4 MVP에 포함하지 않는다.
+
+Idea count 표시는 선택 사항이며,
+구현 시에도 widget과 app이 공유하는 최소 snapshot 값만 사용한다.
+
+### Widget Shared State Rules
+
+Widget과 main app은 App Group을 통해 최소 상태만 공유한다.
+
+Widget이 main app의 SwiftData store 전체를 직접 읽는 구조를 기본으로 하지 않는다.
+
+공유 snapshot은 다음 정보를 포함할 수 있다.
+
+- dateKey
+- isTodayCompleted
+- currentStreak
+- pendingIdeaCount
+- updatedAt
+
+Widget snapshot은 Codable local data로 저장한다.
+
+DailyRecord, Idea 전체 모델을 Widget target에 불필요하게 공유하지 않는다.
+
+### App Group Capability Rules
+
+Widget snapshot 구현 전에 App Group capability 사용 가능 여부를 먼저 확인한다.
+
+확인 순서:
+
+1. Widget Extension target 추가
+2. App target / Widget target Signing 확인
+3. App Groups capability 추가 가능 여부 확인
+4. group.com.sssuunnnm.DevStreak 등록/선택 가능 여부 확인
+5. 두 target이 같은 group을 정상 사용 가능한지 확인
+
+App Group 설정이 signing 또는 provisioning 문제로 막히면
+임의 entitlement 파일을 만들어 우회하지 않는다.
+
+App Group이 정상 구성된 것을 확인한 뒤에만
+WidgetSnapshotStore 구현을 진행한다.
+
+### Widget Refresh Rules
+
+다음 이벤트 후 Widget timeline reload를 요청한다.
+
+- manual completion
+- GitHub verification
+- app launch 또는 app active 시 날짜 변경 감지
+- 필요한 경우 Idea 변경
+
+iOS Widget refresh는 실시간 동기화를 보장하지 않는다.
+
+Widget은 마지막으로 저장된 snapshot을 기준으로 안전하게 표시되어야 한다.
+
+### Widget Navigation Rules
+
+Widget interaction은 app으로 deep link한다.
+
+Phase 4 MVP의 Write shortcut은 Dashboard로 이동하여
+사용자가 기존 Write Today 흐름을 사용할 수 있게 한다.
+
+복잡한 interactive widget action은 Phase 4 MVP 범위에 포함하지 않는다.
+
 ## Phase 5 — GitHub Verification
 
 - Read-only GitHub authentication
@@ -822,3 +895,150 @@ Idea는 SwiftData @Model로 저장한다.
 - main + open PR inspection
 - changed-file inspection
 - githubVerified status
+
+### GitHub Repository Rules
+
+검증 대상 repository:
+
+- sssuunnnm/dev-archive
+
+GitHub integration은 read-only로 제한한다.
+
+앱은 다음 동작을 하지 않는다.
+
+- repository content write
+- commit 생성
+- branch 생성 또는 수정
+- Pull Request 생성 또는 수정
+- merge
+- GitHub Actions 실행
+- file edit
+
+### GitHub Content Path Rules
+
+Daily Goal 완료로 인정하는 변경 경로:
+
+- src/content/articles/**
+- src/content/projects/**
+- src/content/references/**
+- src/content/snippets/**
+
+작성 여부 판단에 다음 값은 사용하지 않는다.
+
+- frontmatter draft
+- frontmatter date
+- branch naming convention
+- PR 존재 여부만
+- main branch commit 존재 여부만
+
+반드시 commit changed files를 확인한다.
+
+### GitHub Detection Scope Rules
+
+MVP 검증 대상:
+
+- main
+- open Pull Requests의 head commits
+- 사용자가 Settings에서 명시적으로 등록한 working branches
+
+working branch는 0개 이상 등록할 수 있다.
+
+모든 branch를 무제한으로 순회하지 않는다.
+
+branch naming pattern으로 자동 판단하지 않는다.
+
+사용자가 명시한 branch만 추가 조회한다.
+
+working branch를 검사하는 경우에도 read-only API만 사용하고,
+branch 이름만으로 완료 처리하지 않는다.
+
+working branch 설정 기능이 MVP 구현 복잡도를 과도하게 높이면
+Phase 5B로 분리할 수 있다.
+
+단, Phase 5 MVP의 GitHub API client와 verification service는
+명시 branch 조회를 추가할 수 있는 구조로 설계한다.
+
+### GitHub Timestamp Rules
+
+commit timestamp는 timezone-aware Date로 해석한다.
+
+앱의 DateService를 통해 local calendar dateKey로 변환한다.
+
+frontmatter date는 작성 날짜로 사용하지 않는다.
+
+### GitHub Verification Persistence Rules
+
+콘텐츠 활동이 확인되면 해당 local dateKey의 DailyRecord를
+githubVerified 상태로 저장한다.
+
+기존 상태 처리:
+
+- record가 없으면 githubVerified DailyRecord를 생성한다.
+- pending이면 githubVerified로 변경한다.
+- manualCompleted이면 githubVerified로 승격할 수 있다.
+- 이미 githubVerified이면 중복 record를 만들지 않는다.
+
+GitHub verification 실패, offline, rate limit, auth 실패는 missed로 기록하지 않는다.
+
+manual completion은 GitHub verification 이후에도 계속 지원한다.
+
+### GitHub Authentication and Security Rules
+
+검증 대상 sssuunnnm/dev-archive는 public repository이므로
+Phase 5 MVP는 unauthenticated public GitHub REST API로 구현한다.
+
+MVP에서 PAT 입력 UI는 필수로 구현하지 않는다.
+
+MVP에서 OAuth를 구현하지 않는다.
+
+MVP에서 credential 저장은 필수로 구현하지 않는다.
+
+GitHub API client는 향후 Authorization header를 추가할 수 있는 구조로 만든다.
+
+rate limit error와 authentication error를 구분할 수 있어야 한다.
+
+public unauthenticated API 한계가 실제 사용에 문제가 되면
+fine-grained PAT와 Keychain 저장을 후속 단계로 추가한다.
+
+credential 또는 token을 hardcode하지 않는다.
+
+token을 UserDefaults에 평문 저장하지 않는다.
+
+credential 저장이 필요하면 Keychain을 사용한다.
+
+GitHub 권한은 read-only 최소 권한을 사용한다.
+
+backend infrastructure를 추가하지 않는다.
+
+### GitHub API Rules
+
+GitHub API 호출은 async/await 기반으로 수행한다.
+
+rate limit과 pagination을 고려한다.
+
+동일 commit은 중복 처리하지 않는다.
+
+network 실패는 사용자에게 재시도 가능한 상태로 표시한다.
+
+### Verification Timing Rules
+
+Phase 5 MVP에서는 다음 시점에 verification을 수행할 수 있다.
+
+- app launch 또는 app active
+- 사용자의 manual refresh action
+
+background polling 또는 server-side scheduler는 구현하지 않는다.
+
+### Phase 4 and Phase 5 Integration Rules
+
+Manual Completion과 GitHub Verification은 모두 DailyRecord를 통해
+오늘 완료 상태를 갱신한다.
+
+GitHub verification으로 오늘 완료가 확인되면:
+
+- DailyRecord.status = githubVerified
+- 오늘 남은 reminder notification을 취소한다.
+- Widget snapshot을 갱신한다.
+- Widget timeline reload를 요청한다.
+
+Widget은 GitHub API를 직접 호출하지 않는다.

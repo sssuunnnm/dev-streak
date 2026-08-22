@@ -6,9 +6,11 @@
 //
 
 import Foundation
+import SwiftData
 
 enum GitHubVerificationFailure: Error, Equatable {
-    case rateLimited
+    case rateLimited(GitHubRateLimitDiagnostics?)
+    case credentialUnavailable
     case unauthorizedOrForbidden
     case notFound
     case networkFailure
@@ -42,6 +44,29 @@ struct GitHubVerificationBudget {
     }
 }
 
+struct GitHubVerificationBudgetPolicy {
+    let unauthenticatedRequestLimit: Int
+    let authenticatedRequestLimit: Int
+
+    init(
+        unauthenticatedRequestLimit: Int = 20,
+        authenticatedRequestLimit: Int = 120
+    ) {
+        self.unauthenticatedRequestLimit = unauthenticatedRequestLimit
+        self.authenticatedRequestLimit = authenticatedRequestLimit
+    }
+
+    func requestLimit(hasAuthentication: Bool) -> Int {
+        hasAuthentication ? authenticatedRequestLimit : unauthenticatedRequestLimit
+    }
+}
+
+enum GitHubVerificationDefaults {
+    static let dashboardLookbackDays = 7
+    static let backfillLookbackDays = 30
+    static let authenticatedBackfillRequestLimit = 240
+}
+
 actor GitHubCommitDetailCache {
     private var contentPathBySHA: [String: Bool] = [:]
 
@@ -65,7 +90,9 @@ struct GitHubVerificationService {
     private let lookbackDays: Int
     private let commitListLimit: Int
     private let pullRequestLimit: Int
-    private let maxRequestsPerVerification: Int
+    private let maxRequestsPerVerification: Int?
+    private let budgetPolicy: GitHubVerificationBudgetPolicy
+    private let credentialStore: GitHubCredentialStore
 
     init(
         client: GitHubAPIClientProtocol = GitHubAPIClient(),
@@ -75,10 +102,12 @@ struct GitHubVerificationService {
         owner: String = "sssuunnnm",
         repository: String = "dev-archive",
         mainRef: String = "main",
-        lookbackDays: Int = 7,
+        lookbackDays: Int = GitHubVerificationDefaults.dashboardLookbackDays,
         commitListLimit: Int = 30,
         pullRequestLimit: Int = 20,
-        maxRequestsPerVerification: Int = 20
+        maxRequestsPerVerification: Int? = nil,
+        budgetPolicy: GitHubVerificationBudgetPolicy = GitHubVerificationBudgetPolicy(),
+        credentialStore: GitHubCredentialStore = GitHubCredentialStore()
     ) {
         self.client = client
         self.dateService = dateService
@@ -91,6 +120,8 @@ struct GitHubVerificationService {
         self.commitListLimit = commitListLimit
         self.pullRequestLimit = pullRequestLimit
         self.maxRequestsPerVerification = maxRequestsPerVerification
+        self.budgetPolicy = budgetPolicy
+        self.credentialStore = credentialStore
     }
 
     func verify(now: Date = .now) async -> Result<GitHubVerificationResult, GitHubVerificationFailure> {
@@ -101,6 +132,8 @@ struct GitHubVerificationService {
             return .failure(failure)
         } catch let error as GitHubAPIError {
             return .failure(Self.failure(from: error))
+        } catch is GitHubCredentialError {
+            return .failure(.credentialUnavailable)
         } catch {
             return .failure(.unknown)
         }
@@ -108,7 +141,7 @@ struct GitHubVerificationService {
 
     func verifiedActivity(now: Date = .now) async throws -> GitHubVerificationResult {
         let since = verificationStartDate(now: now)
-        var budget = GitHubVerificationBudget(maxRequestsPerVerification: maxRequestsPerVerification)
+        var budget = GitHubVerificationBudget(maxRequestsPerVerification: try requestLimit())
         var candidates: [GitHubCommitSummary] = []
 
         candidates += try await pagedCommits(
@@ -157,6 +190,14 @@ struct GitHubVerificationService {
         }
 
         return GitHubVerificationResult(verifiedDateKeys: verifiedDateKeys)
+    }
+
+    private func requestLimit() throws -> Int {
+        if let maxRequestsPerVerification {
+            return maxRequestsPerVerification
+        }
+
+        return budgetPolicy.requestLimit(hasAuthentication: try credentialStore.hasToken())
     }
 
     func deduplicated(_ commits: [GitHubCommitSummary]) -> [GitHubCommitSummary] {
@@ -246,9 +287,11 @@ struct GitHubVerificationService {
 
     private static func failure(from error: GitHubAPIError) -> GitHubVerificationFailure {
         switch error {
-        case .rateLimited:
-            return .rateLimited
-        case .unauthorizedOrForbidden:
+        case .rateLimited(let diagnostics):
+            return .rateLimited(diagnostics)
+        case .credentialUnavailable:
+            return .credentialUnavailable
+        case .unauthorized, .forbidden, .unauthorizedOrForbidden:
             return .unauthorizedOrForbidden
         case .notFound:
             return .notFound
@@ -258,6 +301,125 @@ struct GitHubVerificationService {
             return .decodingFailure
         case .unexpectedStatus:
             return .unknown
+        }
+    }
+}
+
+enum GitHubBackfillFailure: Error, Equatable {
+    case verification(GitHubVerificationFailure)
+    case saveFailed
+}
+
+struct GitHubBackfillResult: Equatable {
+    let verifiedDateKeys: Set<String>
+    let changedDateKeys: Set<String>
+
+    var changedDayCount: Int {
+        changedDateKeys.count
+    }
+}
+
+@MainActor
+struct GitHubBackfillService {
+    private let verify: (Date) async -> Result<GitHubVerificationResult, GitHubVerificationFailure>
+    private let dateService: DateService
+    private let dailyRecordUpdater: GitHubDailyRecordUpdater
+    private let updateWidgetSnapshot: ([DailyRecord], [Idea], Date) -> Void
+    private let cancelTodayReminders: (Date) async -> Void
+
+    init(
+        verificationService: GitHubVerificationService = GitHubVerificationService(
+            lookbackDays: GitHubVerificationDefaults.backfillLookbackDays,
+            budgetPolicy: GitHubVerificationBudgetPolicy(
+                authenticatedRequestLimit: GitHubVerificationDefaults.authenticatedBackfillRequestLimit
+            )
+        ),
+        dateService: DateService = DateService(),
+        dailyRecordUpdater: GitHubDailyRecordUpdater = GitHubDailyRecordUpdater(),
+        widgetSnapshotService: WidgetSnapshotService = WidgetSnapshotService(),
+        reminderNotificationService: ReminderNotificationService = ReminderNotificationService()
+    ) {
+        self.init(
+            verify: { now in
+                await verificationService.verify(now: now)
+            },
+            dateService: dateService,
+            dailyRecordUpdater: dailyRecordUpdater,
+            updateWidgetSnapshot: { records, ideas, now in
+                widgetSnapshotService.updateSnapshot(records: records, ideas: ideas, now: now)
+            },
+            cancelTodayReminders: { now in
+                await reminderNotificationService.cancelTodayReminders(now: now)
+            }
+        )
+    }
+
+    init(
+        verify: @escaping (Date) async -> Result<GitHubVerificationResult, GitHubVerificationFailure>,
+        dateService: DateService = DateService(),
+        dailyRecordUpdater: GitHubDailyRecordUpdater = GitHubDailyRecordUpdater(),
+        updateWidgetSnapshot: @escaping ([DailyRecord], [Idea], Date) -> Void,
+        cancelTodayReminders: @escaping (Date) async -> Void
+    ) {
+        self.verify = verify
+        self.dateService = dateService
+        self.dailyRecordUpdater = dailyRecordUpdater
+        self.updateWidgetSnapshot = updateWidgetSnapshot
+        self.cancelTodayReminders = cancelTodayReminders
+    }
+
+    func backfill(
+        records: [DailyRecord],
+        ideas: [Idea],
+        modelContext: ModelContext,
+        now: Date = .now
+    ) async -> Result<GitHubBackfillResult, GitHubBackfillFailure> {
+        let verificationResult = await verify(now)
+
+        switch verificationResult {
+        case .failure(let failure):
+            return .failure(.verification(failure))
+        case .success(let result):
+            let updates = dailyRecordUpdater.applyVerified(
+                dateKeys: result.verifiedDateKeys,
+                records: records,
+                now: now
+            )
+            let changedDateKeys = Set(updates.compactMap { update -> String? in
+                guard update.requiresSave else {
+                    return nil
+                }
+
+                return update.record.dateKey
+            })
+
+            var snapshotRecords = records
+            for update in updates {
+                if case .created(let record) = update {
+                    modelContext.insert(record)
+                    snapshotRecords.append(record)
+                }
+            }
+
+            do {
+                if updates.contains(where: \.requiresSave) {
+                    try modelContext.save()
+                }
+
+                updateWidgetSnapshot(snapshotRecords, ideas, now)
+
+                if result.verifiedDateKeys.contains(dateService.todayKey(now: now)) {
+                    await cancelTodayReminders(now)
+                }
+
+                return .success(GitHubBackfillResult(
+                    verifiedDateKeys: result.verifiedDateKeys,
+                    changedDateKeys: changedDateKeys
+                ))
+            } catch {
+                modelContext.rollback()
+                return .failure(.saveFailed)
+            }
         }
     }
 }

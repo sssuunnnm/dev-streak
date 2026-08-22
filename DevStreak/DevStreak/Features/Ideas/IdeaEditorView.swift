@@ -30,25 +30,30 @@ struct IdeaEditorView: View {
         title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var normalizedNotes: String {
+        notes.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var canSave: Bool {
-        !normalizedTitle.isEmpty
+        !normalizedNotes.isEmpty
     }
 
     var body: some View {
         Form {
-            Section("Title") {
-                TextField("Title", text: $title)
-            }
+            Section {
+                ZStack(alignment: .topLeading) {
+                    if notes.isEmpty {
+                        Text("나중에 글로 정리하고 싶은 내용을 간단히 남겨보세요.")
+                            .font(DesignTokens.Typography.body)
+                            .foregroundStyle(DesignTokens.Color.textSecondary)
+                            .padding(.top, 8)
+                            .padding(.horizontal, 5)
+                    }
 
-            Section("Notes") {
-                TextEditor(text: $notes)
-                    .frame(minHeight: 160)
-            }
-
-            Section("Tags") {
-                TextField("swift, ios", text: $tagsText)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+                    TextEditor(text: $notes)
+                        .frame(minHeight: 220)
+                        .scrollContentBackground(.hidden)
+                }
             }
 
             if let saveErrorMessage {
@@ -58,16 +63,17 @@ struct IdeaEditorView: View {
                 }
             }
         }
-        .navigationTitle(idea == nil ? "New Idea" : "Edit Idea")
+        .navigationTitle("아이디어 메모")
+        .font(DesignTokens.Typography.body)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
+                Button("취소") {
                     dismiss()
                 }
             }
 
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save", action: save)
+                Button("저장", action: save)
                     .disabled(!canSave)
             }
         }
@@ -80,14 +86,14 @@ struct IdeaEditorView: View {
         if let idea {
             idea.update(
                 title: normalizedTitle,
-                notes: notes,
+                notes: normalizedNotes,
                 tags: normalizedTags,
                 now: now
             )
         } else {
             let idea = Idea(
-                title: normalizedTitle,
-                notes: notes,
+                title: "",
+                notes: normalizedNotes,
                 tags: normalizedTags,
                 createdAt: now,
                 updatedAt: now
@@ -99,7 +105,7 @@ struct IdeaEditorView: View {
             try modelContext.save()
             dismiss()
         } catch {
-            saveErrorMessage = "Could not save idea."
+            saveErrorMessage = "메모를 저장하지 못했습니다."
         }
     }
 }

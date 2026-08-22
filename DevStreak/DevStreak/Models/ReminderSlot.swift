@@ -19,11 +19,11 @@ enum ReminderSlot: String, CaseIterable, Identifiable, Codable {
     var title: String {
         switch self {
         case .morning:
-            "Morning"
+            "아침"
         case .evening:
-            "Evening"
+            "저녁"
         case .night:
-            "Night"
+            "밤"
         }
     }
 
@@ -49,7 +49,7 @@ enum ReminderSlot: String, CaseIterable, Identifiable, Codable {
         case .evening:
             "오늘 아직 기록이 없어요. 짧게라도 하나 남겨볼까요?"
         case .night:
-            "오늘의 기록이 아직 없어요. Streak가 끊기기 전에 하나 남겨보세요."
+            "오늘의 기록이 아직 없어요. Streak가 끊기기 전에 남겨보세요."
         }
     }
 

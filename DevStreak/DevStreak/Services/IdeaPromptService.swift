@@ -8,21 +8,18 @@
 import Foundation
 
 struct IdeaPromptService {
+    func canCreatePrompt(for idea: Idea) -> Bool {
+        idea.hasMemoContent
+    }
+
     func prompt(for idea: Idea) -> String {
-        """
-        Dev Archive에 다음 주제로 글을 작성하려고 합니다.
-
-        주제:
-        \(idea.title)
-
-        메모:
-        \(idea.notes)
-
-        태그:
-        \(idea.tags.joined(separator: ", "))
-
-        CONVENTIONS.md와 DESIGN_RULES.md의 규칙을 따라주세요.
-        기존 Dev Archive의 글 스타일과 구조도 참고해주세요.
-        """
+        let memo = idea.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        return [
+            "우선 CONVENTIONS.md와 DESIGN_RULES.md를 따르고, 기존 Dev Archive 글의 구조와 문체를 참고해줘.",
+            "",
+            memo,
+            "",
+            "이러한 주제로 글을 써보고 싶은데 기술적/흐름적으로 괜찮은지 검토해줘."
+        ].joined(separator: "\n")
     }
 }

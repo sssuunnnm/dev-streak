@@ -22,7 +22,7 @@ struct WidgetDisplayStateTests {
         let state = WidgetDisplayState.make(snapshot: snapshot, currentDateKey: "2026-08-22")
 
         #expect(state.isTodayCompleted)
-        #expect(state.goalText == "✓ 1 / 1")
+        #expect(state.goalText == "1 / 1")
         #expect(state.currentStreak == 4)
     }
 

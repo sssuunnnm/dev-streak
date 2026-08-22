@@ -30,40 +30,43 @@ struct IdeaInboxView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Idea Status", selection: $selectedStatus) {
+            Picker("Idea 상태", selection: $selectedStatus) {
                 ForEach(IdeaStatus.allCases) { status in
                     Text(status.title).tag(status)
                 }
             }
             .pickerStyle(.segmented)
-            .padding()
+            .padding(.horizontal, DesignTokens.Spacing.page)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
 
-            List {
-                if filteredIdeas.isEmpty {
-                    ContentUnavailableView(
-                        selectedStatus.title,
-                        systemImage: "tray",
-                        description: Text(emptyMessage)
-                    )
-                } else {
+            if filteredIdeas.isEmpty {
+                IdeaEmptyState(
+                    title: selectedStatus.title,
+                    message: emptyMessage
+                )
+            } else {
+                List {
                     ForEach(filteredIdeas) { idea in
                         NavigationLink {
                             IdeaDetailView(idea: idea)
                         } label: {
                             IdeaRowView(idea: idea)
                         }
+                        .listRowSeparator(.visible)
                     }
                 }
+                .listStyle(.plain)
             }
-            .listStyle(.plain)
         }
-        .navigationTitle("Idea Inbox")
+        .navigationTitle("아이디어 메모")
+        .font(DesignTokens.Typography.body)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     isShowingNewIdea = true
                 } label: {
-                    Label("New Idea", systemImage: "plus")
+                    Label("새 메모", systemImage: "plus")
                 }
             }
         }
@@ -83,11 +86,11 @@ struct IdeaInboxView: View {
     private var emptyMessage: String {
         switch selectedStatus {
         case .inbox:
-            "No ideas yet."
+            "아직 적어둔 메모가 없습니다."
         case .used:
-            "No used ideas yet."
+            "사용한 메모가 없습니다."
         case .archived:
-            "No archived ideas yet."
+            "보관한 메모가 없습니다."
         }
     }
 
@@ -96,29 +99,83 @@ struct IdeaInboxView: View {
     }
 }
 
+private struct IdeaEmptyState: View {
+    let title: String
+    let message: String
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "note.text")
+                .font(.system(size: 17, weight: .regular))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(DesignTokens.Color.textSecondary)
+                .frame(width: 36, height: 30)
+                .background {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(DesignTokens.Color.accentSoft.opacity(0.45))
+                }
+
+            Text(title)
+                .font(DesignTokens.Typography.headline)
+                .foregroundStyle(DesignTokens.Color.primaryText)
+
+            Text(message)
+                .font(DesignTokens.Typography.subheadline)
+                .foregroundStyle(DesignTokens.Color.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(DesignTokens.Spacing.page)
+    }
+}
+
 private struct IdeaRowView: View {
     let idea: Idea
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(idea.title)
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 7) {
+            Text(idea.displayTitle)
+                .font(DesignTokens.Typography.headline)
+                .foregroundStyle(DesignTokens.Color.primaryText)
+                .lineLimit(2)
 
-            if !idea.notes.isEmpty {
-                Text(idea.notes)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-
-            if !idea.tags.isEmpty {
-                Text(idea.tags.joined(separator: ", "))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            if let preview = idea.displayPreview {
+                Text(preview)
+                    .font(DesignTokens.Typography.subheadline)
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
                     .lineLimit(1)
             }
+
+            HStack(spacing: 8) {
+                Text(idea.createdAt.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits)))
+                    .monospacedDigit()
+
+                Text(idea.status.title)
+            }
+            .font(DesignTokens.Typography.caption)
+            .foregroundStyle(DesignTokens.Color.textSecondary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 10)
+    }
+}
+
+struct TagChip: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(DesignTokens.Typography.caption)
+            .foregroundStyle(DesignTokens.Color.textSecondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background {
+                Capsule()
+                    .fill(DesignTokens.Color.surface)
+                    .overlay {
+                        Capsule()
+                            .stroke(DesignTokens.Color.hairline)
+                    }
+            }
     }
 }
 

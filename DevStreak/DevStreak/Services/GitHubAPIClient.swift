@@ -7,8 +7,34 @@
 
 import Foundation
 
+struct GitHubRateLimitDiagnostics: Equatable {
+    let limit: Int?
+    let remaining: Int?
+    let resetAt: Date?
+
+    init(limit: Int?, remaining: Int?, resetAt: Date?) {
+        self.limit = limit
+        self.remaining = remaining
+        self.resetAt = resetAt
+    }
+
+    init(response: HTTPURLResponse) {
+        limit = response.integerHeader("X-RateLimit-Limit")
+        remaining = response.integerHeader("X-RateLimit-Remaining")
+
+        if let resetTimestamp = response.integerHeader("X-RateLimit-Reset") {
+            resetAt = Date(timeIntervalSince1970: TimeInterval(resetTimestamp))
+        } else {
+            resetAt = nil
+        }
+    }
+}
+
 enum GitHubAPIError: Error, Equatable {
-    case rateLimited
+    case rateLimited(GitHubRateLimitDiagnostics?)
+    case credentialUnavailable
+    case unauthorized
+    case forbidden
     case unauthorizedOrForbidden
     case notFound
     case networkFailure
@@ -30,12 +56,19 @@ struct GitHubCommitDetail: Equatable {
     let filenames: [String]
 }
 
+struct GitHubRepositorySummary: Equatable {
+    let fullName: String
+    let defaultBranch: String
+    let isPrivate: Bool
+}
+
 struct GitHubPage<Value: Equatable>: Equatable {
     let values: [Value]
     let hasNextPage: Bool
 }
 
 protocol GitHubAPIClientProtocol {
+    func repository(owner: String, repository: String) async throws -> GitHubRepositorySummary
     func commits(owner: String, repository: String, ref: String, since: Date?, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary>
     func openPullRequests(owner: String, repository: String, perPage: Int, page: Int) async throws -> GitHubPage<GitHubPullRequest>
     func pullRequestCommits(owner: String, repository: String, number: Int, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary>
@@ -45,18 +78,28 @@ protocol GitHubAPIClientProtocol {
 struct GitHubAPIClient: GitHubAPIClientProtocol {
     private let baseURL: URL
     private let session: URLSession
-    private let authorizationHeaderProvider: (() -> String?)?
+    private let authorizationHeaderProvider: (() throws -> String?)?
     private let dateFormatter: ISO8601DateFormatter
 
     init(
         baseURL: URL = URL(string: "https://api.github.com")!,
         session: URLSession = .shared,
-        authorizationHeaderProvider: (() -> String?)? = nil
+        authorizationHeaderProvider: (() throws -> String?)? = GitHubCredentialStore().authorizationHeader
     ) {
         self.baseURL = baseURL
         self.session = session
         self.authorizationHeaderProvider = authorizationHeaderProvider
         self.dateFormatter = ISO8601DateFormatter()
+    }
+
+    func repository(owner: String, repository: String) async throws -> GitHubRepositorySummary {
+        let request = try request(path: "/repos/\(owner)/\(repository)", queryItems: [])
+        let dto: GitHubRepositoryDTO = try await loadObject(request)
+        return GitHubRepositorySummary(
+            fullName: dto.fullName,
+            defaultBranch: dto.defaultBranch,
+            isPrivate: dto.isPrivate
+        )
     }
 
     func commits(owner: String, repository: String, ref: String, since: Date?, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary> {
@@ -102,7 +145,8 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
 
     func commitDetail(owner: String, repository: String, sha: String) async throws -> GitHubCommitDetail {
         let request = try request(path: "/repos/\(owner)/\(repository)/commits/\(sha)", queryItems: [])
-        return try await loadObject(request)
+        let dto: GitHubCommitDetailDTO = try await loadObject(request)
+        return GitHubCommitDetail(sha: dto.sha, filenames: dto.files.map(\.filename))
     }
 
     private func request(path: String, queryItems: [URLQueryItem]) throws -> URLRequest {
@@ -122,14 +166,21 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
 
-        if let authorizationHeader = authorizationHeaderProvider?(), !authorizationHeader.isEmpty {
+        let authorizationHeader: String?
+        do {
+            authorizationHeader = try authorizationHeaderProvider?()
+        } catch {
+            throw GitHubAPIError.credentialUnavailable
+        }
+
+        if let authorizationHeader, !authorizationHeader.isEmpty {
             request.setValue(authorizationHeader, forHTTPHeaderField: "Authorization")
         }
 
         return request
     }
 
-    private func loadObject(_ request: URLRequest) async throws -> GitHubCommitDetail {
+    private func loadObject<T: Decodable>(_ request: URLRequest) async throws -> T {
         let data: Data
         let response: URLResponse
 
@@ -142,8 +193,7 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         try validate(response: response)
 
         do {
-            let dto = try JSONDecoder().decode(GitHubCommitDetailDTO.self, from: data)
-            return GitHubCommitDetail(sha: dto.sha, filenames: dto.files.map(\.filename))
+            return try JSONDecoder().decode(T.self, from: data)
         } catch {
             throw GitHubAPIError.decodingFailure
         }
@@ -178,11 +228,15 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         switch httpResponse.statusCode {
         case 200..<300:
             return httpResponse
-        case 401, 403:
-            if httpResponse.value(forHTTPHeaderField: "X-RateLimit-Remaining") == "0" {
-                throw GitHubAPIError.rateLimited
+        case 401:
+            throw GitHubAPIError.unauthorized
+        case 403:
+            if httpResponse.isRateLimited {
+                throw GitHubAPIError.rateLimited(GitHubRateLimitDiagnostics(response: httpResponse))
             }
-            throw GitHubAPIError.unauthorizedOrForbidden
+            throw GitHubAPIError.forbidden
+        case 429:
+            throw GitHubAPIError.rateLimited(GitHubRateLimitDiagnostics(response: httpResponse))
         case 404:
             throw GitHubAPIError.notFound
         default:
@@ -192,6 +246,21 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
 
     private func hasNextPage(_ response: HTTPURLResponse) -> Bool {
         response.value(forHTTPHeaderField: "Link")?.contains("rel=\"next\"") == true
+    }
+}
+
+private extension HTTPURLResponse {
+    var isRateLimited: Bool {
+        value(forHTTPHeaderField: "X-RateLimit-Remaining") == "0"
+        || value(forHTTPHeaderField: "Retry-After") != nil
+    }
+
+    func integerHeader(_ name: String) -> Int? {
+        guard let value = value(forHTTPHeaderField: name) else {
+            return nil
+        }
+
+        return Int(value)
     }
 }
 
@@ -221,6 +290,18 @@ private struct GitHubCommitSummaryDTO: Decodable, Equatable {
 
 private struct GitHubPullRequestDTO: Decodable, Equatable {
     let number: Int
+}
+
+private struct GitHubRepositoryDTO: Decodable {
+    let fullName: String
+    let defaultBranch: String
+    let isPrivate: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case fullName = "full_name"
+        case defaultBranch = "default_branch"
+        case isPrivate = "private"
+    }
 }
 
 private struct GitHubCommitDetailDTO: Decodable {

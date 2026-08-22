@@ -24,39 +24,45 @@ struct IdeaDetailView: View {
 
     var body: some View {
         List {
-            Section("Title") {
-                Text(idea.title)
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    if !idea.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(idea.title)
+                            .font(DesignTokens.Typography.headline)
+                            .foregroundStyle(DesignTokens.Color.primaryText)
+                    }
+
+                    Text(idea.notes.isEmpty ? "메모가 없습니다." : idea.notes)
+                        .font(DesignTokens.Typography.body)
+                        .foregroundStyle(idea.notes.isEmpty ? DesignTokens.Color.textSecondary : DesignTokens.Color.primaryText)
+                }
+                .padding(.vertical, 4)
             }
 
-            Section("Notes") {
-                Text(idea.notes.isEmpty ? "No notes." : idea.notes)
-                    .foregroundStyle(idea.notes.isEmpty ? .secondary : .primary)
-            }
-
-            Section("Tags") {
-                if idea.tags.isEmpty {
-                    Text("No tags.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text(idea.tags.joined(separator: ", "))
+            if !idea.tags.isEmpty {
+                Section("태그") {
+                    FlowTagLayout(tags: idea.tags)
                 }
             }
 
-            Section("Status") {
-                Text(idea.status.title)
+            Section("상태") {
+                Label(idea.status.title, systemImage: idea.status.detailIconName)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
             }
 
             Section {
                 Button {
                     writeWithClaude()
                 } label: {
-                    Label("Write with Claude", systemImage: "doc.on.clipboard")
+                    Label("Claude로 글쓰기", systemImage: "doc.on.clipboard")
                 }
+                .disabled(!promptService.canCreatePrompt(for: idea))
 
                 Button {
                     updateStatus(.used)
                 } label: {
-                    Label("Mark as Used", systemImage: "checkmark.circle")
+                    Label("사용함으로 표시", systemImage: "checkmark.circle")
                 }
                 .disabled(idea.status == .used)
 
@@ -64,13 +70,13 @@ struct IdeaDetailView: View {
                     Button {
                         updateStatus(.inbox)
                     } label: {
-                        Label("Restore to Inbox", systemImage: "arrow.uturn.backward")
+                        Label("메모로 복구", systemImage: "arrow.uturn.backward")
                     }
                 } else {
                     Button {
                         updateStatus(.archived)
                     } label: {
-                        Label("Archive", systemImage: "archivebox")
+                        Label("보관하기", systemImage: "archivebox")
                     }
                 }
             }
@@ -79,24 +85,26 @@ struct IdeaDetailView: View {
                 Button(role: .destructive) {
                     isShowingDeleteConfirmation = true
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label("삭제", systemImage: "trash")
                 }
             }
 
             if let actionMessage {
                 Section {
                     Text(actionMessage)
-                        .foregroundStyle(.secondary)
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
                 }
             }
         }
-        .navigationTitle("Idea")
+        .navigationTitle("아이디어 메모")
+        .font(DesignTokens.Typography.body)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     isShowingEditor = true
                 } label: {
-                    Label("Edit", systemImage: "pencil")
+                    Label("수정", systemImage: "pencil")
                 }
             }
         }
@@ -105,15 +113,20 @@ struct IdeaDetailView: View {
                 IdeaEditorView(idea: idea)
             }
         }
-        .confirmationDialog("Delete this idea?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
-            Button("Delete", role: .destructive, action: deleteIdea)
-            Button("Cancel", role: .cancel) {}
+        .confirmationDialog("이 메모를 삭제할까요?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
+            Button("삭제", role: .destructive, action: deleteIdea)
+            Button("취소", role: .cancel) {}
         }
     }
 
     private func writeWithClaude() {
+        guard promptService.canCreatePrompt(for: idea) else {
+            actionMessage = "메모를 입력한 뒤 Claude로 보낼 수 있습니다."
+            return
+        }
+
         UIPasteboard.general.string = promptService.prompt(for: idea)
-        actionMessage = "Prompt copied to clipboard."
+        actionMessage = "프롬프트를 클립보드에 복사했습니다."
 
         guard let url = URL(string: "https://claude.ai/") else {
             return
@@ -141,8 +154,35 @@ struct IdeaDetailView: View {
             return true
         } catch {
             modelContext.rollback()
-            actionMessage = "Could not save changes."
+            actionMessage = "변경사항을 저장하지 못했습니다."
             return false
+        }
+    }
+}
+
+private struct FlowTagLayout: View {
+    let tags: [String]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(tags, id: \.self) { tag in
+                    TagChip(title: tag)
+                }
+            }
+        }
+    }
+}
+
+private extension IdeaStatus {
+    var detailIconName: String {
+        switch self {
+        case .inbox:
+            "tray"
+        case .used:
+            "checkmark.circle"
+        case .archived:
+            "archivebox"
         }
     }
 }

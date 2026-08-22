@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Security
 import Testing
 @testable import DevStreak
 
@@ -71,11 +72,26 @@ struct GitHubVerificationServiceTests {
 
     @Test func apiRateLimitMapsToFailureState() async {
         let client = FakeGitHubAPIClient()
-        client.error = .rateLimited
+        client.error = .rateLimited(nil)
 
         let result = await Self.service(client: client).verify(now: Self.noon("2026-08-22"))
 
-        #expect(result == .failure(.rateLimited))
+        #expect(result == .failure(.rateLimited(nil)))
+    }
+
+    @Test func credentialLoadFailureMapsToCredentialUnavailable() async {
+        let client = FakeGitHubAPIClient()
+        let tokenStore = FakeGitHubTokenStore(loadError: .keychainFailure(errSecInteractionNotAllowed))
+
+        let result = await Self.service(
+            client: client,
+            maxRequests: nil,
+            credentialStore: GitHubCredentialStore(tokenStore: tokenStore)
+        )
+        .verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .failure(.credentialUnavailable))
+        #expect(client.totalRequestCount == 0)
     }
 
     @Test func openPullRequestCommitCanVerifyDate() async throws {
@@ -190,6 +206,103 @@ struct GitHubVerificationServiceTests {
         #expect(result == .failure(.budgetExceeded))
     }
 
+    @Test func authenticatedDefaultBudgetAllowsMoreThanConservativeLimit() async {
+        let client = FakeGitHubAPIClient()
+        let commits = (1...25).map { Self.commit("content-\($0)", "2026-08-22") }
+        client.mainCommitPages = [
+            GitHubPage(values: commits, hasNextPage: false)
+        ]
+        for commit in commits {
+            client.details[commit.sha] = GitHubCommitDetail(
+                sha: commit.sha,
+                filenames: ["src/content/articles/\(commit.sha).md"]
+            )
+        }
+        let tokenStore = FakeGitHubTokenStore()
+        try? tokenStore.saveToken("github_pat_secret")
+
+        let result = await Self.service(
+            client: client,
+            maxRequests: nil,
+            credentialStore: GitHubCredentialStore(tokenStore: tokenStore)
+        )
+        .verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .success(GitHubVerificationResult(verifiedDateKeys: ["2026-08-22"])))
+        #expect(client.totalRequestCount == 27)
+    }
+
+    @Test func unauthenticatedDefaultBudgetKeepsConservativeLimit() async {
+        let client = FakeGitHubAPIClient()
+        let commits = (1...25).map { Self.commit("content-\($0)", "2026-08-22") }
+        client.mainCommitPages = [
+            GitHubPage(values: commits, hasNextPage: false)
+        ]
+
+        let result = await Self.service(
+            client: client,
+            maxRequests: nil,
+            credentialStore: GitHubCredentialStore(tokenStore: FakeGitHubTokenStore())
+        )
+        .verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .failure(.budgetExceeded))
+    }
+
+    @Test func emptyVerifiedDateKeysAreSuccessNotFailure() async {
+        let client = FakeGitHubAPIClient()
+        client.mainCommitPages = [
+            GitHubPage(values: [Self.commit("docs", "2026-08-22")], hasNextPage: false)
+        ]
+        client.details["docs"] = GitHubCommitDetail(sha: "docs", filenames: ["README.md"])
+
+        let result = await Self.service(client: client).verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .success(GitHubVerificationResult(verifiedDateKeys: [])))
+    }
+
+    @Test func dashboardVerificationKeepsSevenDayLookback() async {
+        let client = FakeGitHubAPIClient()
+        client.mainCommitPages = [
+            GitHubPage(values: [Self.commit("old-content", "2026-08-14")], hasNextPage: false)
+        ]
+        client.details["old-content"] = GitHubCommitDetail(
+            sha: "old-content",
+            filenames: ["src/content/articles/old.md"]
+        )
+
+        let result = await Self.service(
+            client: client,
+            maxRequests: nil,
+            lookbackDays: GitHubVerificationDefaults.dashboardLookbackDays
+        )
+        .verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .success(GitHubVerificationResult(verifiedDateKeys: [])))
+        #expect(client.detailSHAs.isEmpty)
+    }
+
+    @Test func thirtyDayBackfillCanVerifyDatesBeforeDashboardLookback() async {
+        let client = FakeGitHubAPIClient()
+        client.mainCommitPages = [
+            GitHubPage(values: [Self.commit("old-content", "2026-08-03")], hasNextPage: false)
+        ]
+        client.details["old-content"] = GitHubCommitDetail(
+            sha: "old-content",
+            filenames: ["src/content/snippets/sql-date-format.md"]
+        )
+
+        let result = await Self.service(
+            client: client,
+            maxRequests: GitHubVerificationDefaults.authenticatedBackfillRequestLimit,
+            lookbackDays: GitHubVerificationDefaults.backfillLookbackDays
+        )
+        .verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .success(GitHubVerificationResult(verifiedDateKeys: ["2026-08-03"])))
+        #expect(client.detailSHAs == ["old-content"])
+    }
+
     @Test func detailCacheAvoidsRepeatedRequestForSameSHAAcrossRuns() async throws {
         let client = FakeGitHubAPIClient()
         let cache = GitHubCommitDetailCache()
@@ -208,14 +321,17 @@ struct GitHubVerificationServiceTests {
     private static func service(
         client: FakeGitHubAPIClient,
         cache: GitHubCommitDetailCache = GitHubCommitDetailCache(),
-        maxRequests: Int = 20
+        maxRequests: Int? = 20,
+        credentialStore: GitHubCredentialStore = GitHubCredentialStore(tokenStore: FakeGitHubTokenStore()),
+        lookbackDays: Int = 7
     ) -> GitHubVerificationService {
         GitHubVerificationService(
             client: client,
             dateService: DateService(calendar: calendar),
             detailCache: cache,
-            lookbackDays: 7,
-            maxRequestsPerVerification: maxRequests
+            lookbackDays: lookbackDays,
+            maxRequestsPerVerification: maxRequests,
+            credentialStore: credentialStore
         )
     }
 
@@ -246,6 +362,31 @@ struct GitHubVerificationServiceTests {
     }
 }
 
+private final class FakeGitHubTokenStore: GitHubTokenStoreProtocol {
+    private var token: String?
+    private let loadError: GitHubCredentialError?
+
+    init(loadError: GitHubCredentialError? = nil) {
+        self.loadError = loadError
+    }
+
+    func loadToken() throws -> String? {
+        if let loadError {
+            throw loadError
+        }
+
+        return token
+    }
+
+    func saveToken(_ token: String) throws {
+        self.token = token
+    }
+
+    func deleteToken() throws {
+        token = nil
+    }
+}
+
 final class FakeGitHubAPIClient: GitHubAPIClientProtocol {
     var mainCommitPages: [GitHubPage<GitHubCommitSummary>] = []
     var pullRequestPages: [GitHubPage<GitHubPullRequest>] = []
@@ -262,6 +403,18 @@ final class FakeGitHubAPIClient: GitHubAPIClientProtocol {
         + pullRequestRequestedPages.count
         + pullRequestCommitRequestedPages.values.reduce(0) { $0 + $1.count }
         + detailSHAs.count
+    }
+
+    func repository(owner: String, repository: String) async throws -> GitHubRepositorySummary {
+        if let error {
+            throw error
+        }
+
+        return GitHubRepositorySummary(
+            fullName: "\(owner)/\(repository)",
+            defaultBranch: "main",
+            isPrivate: false
+        )
     }
 
     func commits(owner: String, repository: String, ref: String, since: Date?, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary> {

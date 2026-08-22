@@ -15,7 +15,7 @@ struct WidgetDisplayState: Equatable {
     var updatedAt: Date
 
     var goalText: String {
-        isTodayCompleted ? "✓ 1 / 1" : "0 / 1"
+        isTodayCompleted ? "1 / 1" : "0 / 1"
     }
 
     static func make(snapshot: WidgetSnapshot, currentDateKey: String) -> WidgetDisplayState {

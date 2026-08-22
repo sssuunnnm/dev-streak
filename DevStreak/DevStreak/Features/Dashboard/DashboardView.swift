@@ -68,17 +68,11 @@ struct DashboardView: View {
                         bestStreak: bestStreak,
                         completionSource: completionSourceText,
                         verificationState: githubVerificationState,
-                        gitHubSettingsDestination: {
-                            GitHubConnectionSettingsView()
-                        },
                         writeAction: {
                             manualCompletionConfirmation.request()
                         },
                         refreshAction: verifyGitHubActivity
                     )
-
-                    Divider()
-                        .overlay(DesignTokens.Color.hairline)
 
                     NavigationLink {
                         IdeaInboxView()
@@ -153,7 +147,7 @@ struct DashboardView: View {
 
     private var completionSourceText: String {
         if let todayRecord, todayRecord.status == .githubVerified {
-            return "GitHub에서 기록 확인"
+            return "오늘 기록 완료"
         } else if let todayRecord, todayRecord.status.isCompleted {
             return "오늘 기록 완료"
         } else {
@@ -342,14 +336,13 @@ private struct DashboardHeader<ReminderDestination: View>: View {
     }
 }
 
-private struct PrimaryGoalCard<GitHubSettingsDestination: View>: View {
+private struct PrimaryGoalCard: View {
     let dateKey: String
     let isCompleted: Bool
     let currentStreak: Int
     let bestStreak: Int
     let completionSource: String
     let verificationState: GitHubVerificationViewState
-    let gitHubSettingsDestination: GitHubSettingsDestination
     let writeAction: () -> Void
     let refreshAction: () -> Void
 
@@ -360,7 +353,6 @@ private struct PrimaryGoalCard<GitHubSettingsDestination: View>: View {
         bestStreak: Int,
         completionSource: String,
         verificationState: GitHubVerificationViewState,
-        @ViewBuilder gitHubSettingsDestination: () -> GitHubSettingsDestination,
         writeAction: @escaping () -> Void,
         refreshAction: @escaping () -> Void
     ) {
@@ -370,7 +362,6 @@ private struct PrimaryGoalCard<GitHubSettingsDestination: View>: View {
         self.bestStreak = bestStreak
         self.completionSource = completionSource
         self.verificationState = verificationState
-        self.gitHubSettingsDestination = gitHubSettingsDestination()
         self.writeAction = writeAction
         self.refreshAction = refreshAction
     }
@@ -416,9 +407,6 @@ private struct PrimaryGoalCard<GitHubSettingsDestination: View>: View {
             GitHubVerificationRow(
                 state: verificationState,
                 isTodayCompleted: isCompleted,
-                settingsDestination: {
-                    gitHubSettingsDestination
-                },
                 refreshAction: refreshAction
             )
         }
@@ -460,10 +448,9 @@ private struct StreakInlineMetrics: View {
     }
 }
 
-private struct GitHubVerificationRow<SettingsDestination: View>: View {
+private struct GitHubVerificationRow: View {
     let state: GitHubVerificationViewState
     let isTodayCompleted: Bool
-    let settingsDestination: SettingsDestination
     let refreshAction: () -> Void
 
     @State private var isHelpPresented = false
@@ -471,34 +458,26 @@ private struct GitHubVerificationRow<SettingsDestination: View>: View {
     init(
         state: GitHubVerificationViewState,
         isTodayCompleted: Bool,
-        @ViewBuilder settingsDestination: () -> SettingsDestination,
         refreshAction: @escaping () -> Void
     ) {
         self.state = state
         self.isTodayCompleted = isTodayCompleted
-        self.settingsDestination = settingsDestination()
         self.refreshAction = refreshAction
     }
 
     var body: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("GitHub 기록 확인")
-                    .font(DesignTokens.Typography.captionStrong)
+            HStack(spacing: 5) {
+                Text(state.message(isTodayCompleted: isTodayCompleted))
+                    .font(DesignTokens.Typography.footnote)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
 
-                HStack(spacing: 5) {
-                    Text(state.message(isTodayCompleted: isTodayCompleted))
-                        .font(DesignTokens.Typography.footnote)
-                        .foregroundStyle(DesignTokens.Color.textSecondary)
-
-                    if let symbolName = state.statusSymbolName {
-                        Image(systemName: symbolName)
-                            .font(.system(size: 11, weight: .medium))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(state.tint)
-                            .symbolEffect(.rotate, options: .repeating, value: state == .checking)
-                    }
+                if let symbolName = state.statusSymbolName {
+                    Image(systemName: symbolName)
+                        .font(.system(size: 10, weight: .medium))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(state.tint)
+                        .symbolEffect(.rotate, options: .repeating, value: state == .checking)
                 }
             }
 
@@ -520,17 +499,6 @@ private struct GitHubVerificationRow<SettingsDestination: View>: View {
                 }
             }
 
-            NavigationLink {
-                settingsDestination
-            } label: {
-                Image(systemName: "key")
-                    .font(.system(size: 14, weight: .semibold))
-                    .frame(width: 30, height: 34)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(DesignTokens.Color.textSecondary)
-            .accessibilityLabel("GitHub 연결 설정")
-
             Button(action: refreshAction) {
                 Image(systemName: "arrow.clockwise")
                     .font(.system(size: 15, weight: .semibold))
@@ -549,31 +517,42 @@ private struct IdeaInboxSummaryCard: View {
     let waitingCount: Int
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "lightbulb")
-                .font(.system(size: 18, weight: .medium))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(DesignTokens.Color.accent)
-                .frame(width: 24)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                Image(systemName: "note.text")
+                    .font(.system(size: 16, weight: .regular))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(DesignTokens.Color.accent.opacity(0.72))
+                    .frame(width: 20)
 
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.tight) {
-                Text("Idea Inbox")
+                Text("아이디어 메모")
                     .font(DesignTokens.Typography.headline)
                     .foregroundStyle(DesignTokens.Color.primaryText)
 
-                Text("\(waitingCount)개 대기 중")
-                    .font(DesignTokens.Typography.subheadline)
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(DesignTokens.Typography.captionStrong)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
-                    .monospacedDigit()
             }
 
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(DesignTokens.Typography.captionStrong)
+            Text("\(waitingCount)개 대기 중")
+                .font(DesignTokens.Typography.subheadline)
                 .foregroundStyle(DesignTokens.Color.textSecondary)
+                .monospacedDigit()
+                .padding(.leading, 32)
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(DesignTokens.Color.surface.opacity(0.82))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(DesignTokens.Color.hairline.opacity(0.35), lineWidth: 0.5)
+                }
+        }
     }
 }
 
@@ -623,13 +602,13 @@ private enum GitHubVerificationViewState: Equatable {
     func message(isTodayCompleted: Bool) -> String {
         switch self {
         case .idle:
-            return isTodayCompleted ? "기록 완료" : "확인 준비됨"
+            return isTodayCompleted ? "오늘 기록 완료" : "GitHub 확인 준비됨"
         case .checking:
-            return "확인 중..."
+            return "GitHub 기록 확인 중..."
         case .verified:
-            return "확인됨"
+            return "GitHub에서 확인됨"
         case .noActivity:
-            return isTodayCompleted ? "아직 GitHub 기록은 없어요" : "아직 기록이 없어요"
+            return "확인된 GitHub 기록 없음"
         case .failure(.rateLimited(let diagnostics)):
             if let resetAt = diagnostics?.resetAt {
                 return "\(resetAt.formatted(date: .omitted, time: .shortened)) 이후 다시 확인해 주세요"
@@ -643,7 +622,7 @@ private enum GitHubVerificationViewState: Equatable {
         case .failure(.networkFailure):
             return "네트워크를 확인해 주세요"
         case .failure(.decodingFailure), .failure(.unknown), .unableToCheck:
-            return "확인하지 못했습니다"
+            return "GitHub 기록을 확인하지 못했습니다"
         case .failure(.budgetExceeded):
             return "GitHub 기록이 많아 확인을 완료하지 못했습니다"
         }

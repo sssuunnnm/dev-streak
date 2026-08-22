@@ -108,7 +108,7 @@ private struct DevStreakSmallWidgetView: View {
                 Image(systemName: "lightbulb")
                     .font(.caption2.weight(.semibold))
 
-                Text(entry.displayState.pendingIdeaCount > 0 ? "Idea \(entry.displayState.pendingIdeaCount)개 대기 중" : "대기 중인 Idea 없음")
+                Text(entry.displayState.pendingIdeaCount > 0 ? "메모 \(entry.displayState.pendingIdeaCount)개 대기 중" : "대기 중인 메모 없음")
                     .font(WidgetTypography.caption)
                     .lineLimit(1)
             }
@@ -144,7 +144,7 @@ private struct DevStreakMediumWidgetView: View {
 
             VStack(alignment: .trailing, spacing: 12) {
                 WidgetMetricBlock(label: "연속 기록", value: "\(entry.displayState.currentStreak)일")
-                WidgetMetricBlock(label: "Idea Inbox", value: "\(entry.displayState.pendingIdeaCount)개")
+                WidgetMetricBlock(label: "아이디어 메모", value: "\(entry.displayState.pendingIdeaCount)개")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -239,10 +239,10 @@ private enum WidgetPalette {
 }
 
 private enum WidgetTypography {
-    static let caption = Font.custom("Paperlogy-5Medium", size: 11, relativeTo: .caption2)
-    static let captionStrong = Font.custom("Paperlogy-6SemiBold", size: 12, relativeTo: .caption)
-    static let metric = Font.custom("Paperlogy-7Bold", size: 38, relativeTo: .title)
-    static let mediumMetric = Font.custom("Paperlogy-7Bold", size: 42, relativeTo: .largeTitle)
+    static let caption = Font.system(size: 11, weight: .medium)
+    static let captionStrong = Font.system(size: 12, weight: .semibold)
+    static let metric = Font.system(size: 38, weight: .bold)
+    static let mediumMetric = Font.system(size: 42, weight: .bold)
 }
 
 struct DevStreakWidget: Widget {

@@ -13,14 +13,6 @@
 		C0DE00000000000000000022 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE0000000000000000001E /* WidgetSnapshot.swift */; };
 		C0DE00000000000000000023 /* WidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE0000000000000000001F /* WidgetSnapshotStore.swift */; };
 		C0DE00000000000000000024 /* WidgetDisplayState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000020 /* WidgetDisplayState.swift */; };
-		C0DEFONT0000000000000001 /* Paperlogy-4Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DEFONT0000000000000011 /* Paperlogy-4Regular.ttf */; };
-		C0DEFONT0000000000000002 /* Paperlogy-5Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DEFONT0000000000000012 /* Paperlogy-5Medium.ttf */; };
-		C0DEFONT0000000000000003 /* Paperlogy-6SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DEFONT0000000000000013 /* Paperlogy-6SemiBold.ttf */; };
-		C0DEFONT0000000000000004 /* Paperlogy-7Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DEFONT0000000000000014 /* Paperlogy-7Bold.ttf */; };
-		C0DEFONT0000000000000005 /* Paperlogy-4Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DEFONT0000000000000011 /* Paperlogy-4Regular.ttf */; };
-		C0DEFONT0000000000000006 /* Paperlogy-5Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DEFONT0000000000000012 /* Paperlogy-5Medium.ttf */; };
-		C0DEFONT0000000000000007 /* Paperlogy-6SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DEFONT0000000000000013 /* Paperlogy-6SemiBold.ttf */; };
-		C0DEFONT0000000000000008 /* Paperlogy-7Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DEFONT0000000000000014 /* Paperlogy-7Bold.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,10 +65,6 @@
 		C0DE0000000000000000001E /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
 		C0DE0000000000000000001F /* WidgetSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotStore.swift; sourceTree = "<group>"; };
 		C0DE00000000000000000020 /* WidgetDisplayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDisplayState.swift; sourceTree = "<group>"; };
-		C0DEFONT0000000000000011 /* Paperlogy-4Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Paperlogy-4Regular.ttf"; sourceTree = "<group>"; };
-		C0DEFONT0000000000000012 /* Paperlogy-5Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Paperlogy-5Medium.ttf"; sourceTree = "<group>"; };
-		C0DEFONT0000000000000013 /* Paperlogy-6SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Paperlogy-6SemiBold.ttf"; sourceTree = "<group>"; };
-		C0DEFONT0000000000000014 /* Paperlogy-7Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Paperlogy-7Bold.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -133,7 +121,6 @@
 			isa = PBXGroup;
 			children = (
 				A49CD141303895D900235200 /* DevStreak */,
-				C0DEFONT0000000000000010 /* Resources */,
 				C0DE0000000000000000001C /* DevStreak/Shared */,
 				C0DE00000000000000000002 /* DevStreakWidget */,
 				A49CD151303895DB00235200 /* DevStreakTests */,
@@ -172,25 +159,6 @@
 				C0DE00000000000000000020 /* WidgetDisplayState.swift */,
 			);
 			path = DevStreak/Shared;
-			sourceTree = "<group>";
-		};
-		C0DEFONT0000000000000010 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				C0DEFONT0000000000000015 /* Fonts */,
-			);
-			path = Resources;
-			sourceTree = "<group>";
-		};
-		C0DEFONT0000000000000015 /* Fonts */ = {
-			isa = PBXGroup;
-			children = (
-				C0DEFONT0000000000000011 /* Paperlogy-4Regular.ttf */,
-				C0DEFONT0000000000000012 /* Paperlogy-5Medium.ttf */,
-				C0DEFONT0000000000000013 /* Paperlogy-6SemiBold.ttf */,
-				C0DEFONT0000000000000014 /* Paperlogy-7Bold.ttf */,
-			);
-			path = Fonts;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -348,10 +316,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C0DEFONT0000000000000001 /* Paperlogy-4Regular.ttf in Resources */,
-				C0DEFONT0000000000000002 /* Paperlogy-5Medium.ttf in Resources */,
-				C0DEFONT0000000000000003 /* Paperlogy-6SemiBold.ttf in Resources */,
-				C0DEFONT0000000000000004 /* Paperlogy-7Bold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -373,10 +337,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C0DEFONT0000000000000005 /* Paperlogy-4Regular.ttf in Resources */,
-				C0DEFONT0000000000000006 /* Paperlogy-5Medium.ttf in Resources */,
-				C0DEFONT0000000000000007 /* Paperlogy-6SemiBold.ttf in Resources */,
-				C0DEFONT0000000000000008 /* Paperlogy-7Bold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

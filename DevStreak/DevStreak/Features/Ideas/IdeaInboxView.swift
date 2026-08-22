@@ -37,17 +37,16 @@ struct IdeaInboxView: View {
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, DesignTokens.Spacing.page)
-            .padding(.top, 12)
-            .padding(.bottom, 10)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
 
-            List {
-                if filteredIdeas.isEmpty {
-                    ContentUnavailableView(
-                        selectedStatus.title,
-                        systemImage: emptySystemImage,
-                    description: Text(emptyMessage)
-                    )
-                } else {
+            if filteredIdeas.isEmpty {
+                IdeaEmptyState(
+                    title: selectedStatus.title,
+                    message: emptyMessage
+                )
+            } else {
+                List {
                     ForEach(filteredIdeas) { idea in
                         NavigationLink {
                             IdeaDetailView(idea: idea)
@@ -57,17 +56,17 @@ struct IdeaInboxView: View {
                         .listRowSeparator(.visible)
                     }
                 }
+                .listStyle(.plain)
             }
-            .listStyle(.plain)
         }
-        .navigationTitle("Idea Inbox")
+        .navigationTitle("아이디어 메모")
         .font(DesignTokens.Typography.body)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     isShowingNewIdea = true
                 } label: {
-                    Label("새 Idea", systemImage: "plus")
+                    Label("새 메모", systemImage: "plus")
                 }
             }
         }
@@ -87,22 +86,11 @@ struct IdeaInboxView: View {
     private var emptyMessage: String {
         switch selectedStatus {
         case .inbox:
-            "아직 Idea가 없습니다."
+            "아직 적어둔 메모가 없습니다."
         case .used:
-            "사용한 Idea가 없습니다."
+            "사용한 메모가 없습니다."
         case .archived:
-            "보관한 Idea가 없습니다."
-        }
-    }
-
-    private var emptySystemImage: String {
-        switch selectedStatus {
-        case .inbox:
-            "tray"
-        case .used:
-            "checkmark.circle"
-        case .archived:
-            "archivebox"
+            "보관한 메모가 없습니다."
         }
     }
 
@@ -111,40 +99,63 @@ struct IdeaInboxView: View {
     }
 }
 
+private struct IdeaEmptyState: View {
+    let title: String
+    let message: String
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "note.text")
+                .font(.system(size: 17, weight: .regular))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(DesignTokens.Color.textSecondary)
+                .frame(width: 36, height: 30)
+                .background {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(DesignTokens.Color.accentSoft.opacity(0.45))
+                }
+
+            Text(title)
+                .font(DesignTokens.Typography.headline)
+                .foregroundStyle(DesignTokens.Color.primaryText)
+
+            Text(message)
+                .font(DesignTokens.Typography.subheadline)
+                .foregroundStyle(DesignTokens.Color.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(DesignTokens.Spacing.page)
+    }
+}
+
 private struct IdeaRowView: View {
     let idea: Idea
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Image(systemName: idea.status.iconName)
-                    .font(.caption.weight(.medium))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(idea.status.tint)
+        VStack(alignment: .leading, spacing: 7) {
+            Text(idea.displayTitle)
+                .font(DesignTokens.Typography.headline)
+                .foregroundStyle(DesignTokens.Color.primaryText)
+                .lineLimit(2)
 
-                Text(idea.title)
-                    .font(DesignTokens.Typography.headline)
-                    .foregroundStyle(DesignTokens.Color.primaryText)
-            }
-
-            if !idea.notes.isEmpty {
-                Text(idea.notes)
+            if let preview = idea.displayPreview {
+                Text(preview)
                     .font(DesignTokens.Typography.subheadline)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
-                    .lineLimit(2)
+                    .lineLimit(1)
             }
 
-            if !idea.tags.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(idea.tags, id: \.self) { tag in
-                            TagChip(title: tag)
-                        }
-                    }
-                }
+            HStack(spacing: 8) {
+                Text(idea.createdAt.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits)))
+                    .monospacedDigit()
+
+                Text(idea.status.title)
             }
+            .font(DesignTokens.Typography.caption)
+            .foregroundStyle(DesignTokens.Color.textSecondary)
         }
-        .padding(.vertical, 9)
+        .padding(.vertical, 10)
     }
 }
 
@@ -165,30 +176,6 @@ struct TagChip: View {
                             .stroke(DesignTokens.Color.hairline)
                     }
             }
-    }
-}
-
-private extension IdeaStatus {
-    var iconName: String {
-        switch self {
-        case .inbox:
-            "lightbulb"
-        case .used:
-            "checkmark.circle"
-        case .archived:
-            "archivebox"
-        }
-    }
-
-    var tint: Color {
-        switch self {
-        case .inbox:
-            DesignTokens.Color.accent
-        case .used:
-            DesignTokens.Color.success
-        case .archived:
-            DesignTokens.Color.textSecondary
-        }
     }
 }
 

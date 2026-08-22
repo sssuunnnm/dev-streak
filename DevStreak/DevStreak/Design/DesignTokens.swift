@@ -23,46 +23,18 @@ enum DesignTokens {
     }
 
     enum Typography {
-        enum PaperlogyWeight {
-            case regular
-            case medium
-            case semiBold
-            case bold
-
-            var postScriptName: String {
-                switch self {
-                case .regular:
-                    return "Paperlogy-4Regular"
-                case .medium:
-                    return "Paperlogy-5Medium"
-                case .semiBold:
-                    return "Paperlogy-6SemiBold"
-                case .bold:
-                    return "Paperlogy-7Bold"
-                }
-            }
-        }
-
-        static func paperlogy(
-            size: CGFloat,
-            weight: PaperlogyWeight = .regular,
-            relativeTo textStyle: Font.TextStyle = .body
-        ) -> Font {
-            Font.custom(weight.postScriptName, size: size, relativeTo: textStyle)
-        }
-
-        static let body = paperlogy(size: 16, relativeTo: .body)
-        static let caption = paperlogy(size: 12, weight: .medium, relativeTo: .caption)
-        static let captionStrong = paperlogy(size: 12, weight: .semiBold, relativeTo: .caption)
-        static let footnote = paperlogy(size: 13, relativeTo: .footnote)
-        static let subheadline = paperlogy(size: 15, relativeTo: .subheadline)
-        static let headline = paperlogy(size: 17, weight: .semiBold, relativeTo: .headline)
-        static let title = paperlogy(size: 34, weight: .bold, relativeTo: .largeTitle)
-        static let title3 = paperlogy(size: 20, weight: .semiBold, relativeTo: .title3)
-        static let heroMetric = paperlogy(size: 49, weight: .bold, relativeTo: .largeTitle)
-        static let widgetMetric = paperlogy(size: 38, weight: .bold, relativeTo: .title)
-        static let roundedTitle = paperlogy(size: 20, weight: .semiBold, relativeTo: .title3)
-        static let roundedMetric = paperlogy(size: 22, weight: .bold, relativeTo: .title2)
+        static let body = Font.system(size: 16, weight: .regular)
+        static let caption = Font.system(size: 12, weight: .medium)
+        static let captionStrong = Font.system(size: 12, weight: .semibold)
+        static let footnote = Font.system(size: 13, weight: .regular)
+        static let subheadline = Font.system(size: 15, weight: .regular)
+        static let headline = Font.system(size: 17, weight: .semibold)
+        static let title = Font.system(size: 34, weight: .bold)
+        static let title3 = Font.system(size: 20, weight: .semibold)
+        static let heroMetric = Font.system(size: 49, weight: .bold)
+        static let widgetMetric = Font.system(size: 38, weight: .bold)
+        static let roundedTitle = Font.system(size: 20, weight: .semibold)
+        static let roundedMetric = Font.system(size: 22, weight: .bold)
     }
 
     enum Color {

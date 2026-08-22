@@ -15,6 +15,7 @@ struct CalendarMonthView: View {
     private let calendarService = HabitCalendarService()
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
     private let weekdaySymbols = ["월", "화", "수", "목", "금", "토", "일"]
+    private let dayCellHeight: CGFloat = 34
 
     private var monthDays: [HabitCalendarDay] {
         calendarService.days(containing: now, records: records, now: now)
@@ -39,35 +40,16 @@ struct CalendarMonthView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("이번 달")
-                        .font(DesignTokens.Typography.headline)
-                        .foregroundStyle(DesignTokens.Color.primaryText)
-
-                    Text(dateService.monthTitle(containing: now))
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundStyle(DesignTokens.Color.textSecondary)
-                }
+                Text("이번 달")
+                    .font(DesignTokens.Typography.headline)
+                    .foregroundStyle(DesignTokens.Color.primaryText)
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(rateText)
-                        .font(DesignTokens.Typography.headline)
-                        .monospacedDigit()
-                        .foregroundStyle(DesignTokens.Color.accent)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
-                        .background {
-                            Capsule()
-                                .fill(DesignTokens.Color.accentSoft)
-                        }
-
-                    Text("\(monthlyRate.eligibleDays)일 중 \(monthlyRate.completedDays)일 기록")
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundStyle(DesignTokens.Color.textSecondary)
-                        .monospacedDigit()
-                }
+                Text(rateText)
+                    .font(DesignTokens.Typography.headline)
+                    .monospacedDigit()
+                    .foregroundStyle(DesignTokens.Color.accent)
             }
 
             LazyVGrid(columns: columns, spacing: 8) {
@@ -80,11 +62,11 @@ struct CalendarMonthView: View {
 
                 ForEach(0..<leadingBlankDayCount, id: \.self) { _ in
                     Color.clear
-                        .aspectRatio(1, contentMode: .fit)
+                        .frame(height: dayCellHeight)
                 }
 
                 ForEach(monthDays) { day in
-                    CalendarDayCell(day: day)
+                    CalendarDayCell(day: day, height: dayCellHeight)
                 }
             }
         }
@@ -93,13 +75,14 @@ struct CalendarMonthView: View {
 
 private struct CalendarDayCell: View {
     let day: HabitCalendarDay
+    let height: CGFloat
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.small, style: .continuous)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(backgroundStyle)
                 .overlay {
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.small, style: .continuous)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .stroke(borderStyle, lineWidth: borderWidth)
                 }
 
@@ -108,7 +91,7 @@ private struct CalendarDayCell: View {
                 .monospacedDigit()
                 .foregroundStyle(foregroundStyle)
         }
-        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height)
         .accessibilityLabel(accessibilityLabel)
     }
 

@@ -25,24 +25,22 @@ struct IdeaDetailView: View {
     var body: some View {
         List {
             Section {
-                Text(idea.title)
-                    .font(DesignTokens.Typography.roundedMetric)
-                    .foregroundStyle(DesignTokens.Color.primaryText)
-                    .padding(.vertical, 4)
-            } header: {
-                Text("제목")
+                VStack(alignment: .leading, spacing: 12) {
+                    if !idea.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(idea.title)
+                            .font(DesignTokens.Typography.headline)
+                            .foregroundStyle(DesignTokens.Color.primaryText)
+                    }
+
+                    Text(idea.notes.isEmpty ? "메모가 없습니다." : idea.notes)
+                        .font(DesignTokens.Typography.body)
+                        .foregroundStyle(idea.notes.isEmpty ? DesignTokens.Color.textSecondary : DesignTokens.Color.primaryText)
+                }
+                .padding(.vertical, 4)
             }
 
-            Section("메모") {
-                Text(idea.notes.isEmpty ? "메모가 없습니다." : idea.notes)
-                    .foregroundStyle(idea.notes.isEmpty ? .secondary : .primary)
-            }
-
-            Section("태그") {
-                if idea.tags.isEmpty {
-                    Text("태그가 없습니다.")
-                        .foregroundStyle(DesignTokens.Color.textSecondary)
-                } else {
+            if !idea.tags.isEmpty {
+                Section("태그") {
                     FlowTagLayout(tags: idea.tags)
                 }
             }
@@ -59,6 +57,7 @@ struct IdeaDetailView: View {
                 } label: {
                     Label("Claude로 글쓰기", systemImage: "doc.on.clipboard")
                 }
+                .disabled(!promptService.canCreatePrompt(for: idea))
 
                 Button {
                     updateStatus(.used)
@@ -71,7 +70,7 @@ struct IdeaDetailView: View {
                     Button {
                         updateStatus(.inbox)
                     } label: {
-                        Label("Inbox로 복구", systemImage: "arrow.uturn.backward")
+                        Label("메모로 복구", systemImage: "arrow.uturn.backward")
                     }
                 } else {
                     Button {
@@ -98,7 +97,7 @@ struct IdeaDetailView: View {
                 }
             }
         }
-        .navigationTitle("Idea")
+        .navigationTitle("아이디어 메모")
         .font(DesignTokens.Typography.body)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -114,13 +113,18 @@ struct IdeaDetailView: View {
                 IdeaEditorView(idea: idea)
             }
         }
-        .confirmationDialog("이 Idea를 삭제할까요?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
+        .confirmationDialog("이 메모를 삭제할까요?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
             Button("삭제", role: .destructive, action: deleteIdea)
             Button("취소", role: .cancel) {}
         }
     }
 
     private func writeWithClaude() {
+        guard promptService.canCreatePrompt(for: idea) else {
+            actionMessage = "메모를 입력한 뒤 Claude로 보낼 수 있습니다."
+            return
+        }
+
         UIPasteboard.general.string = promptService.prompt(for: idea)
         actionMessage = "프롬프트를 클립보드에 복사했습니다."
 

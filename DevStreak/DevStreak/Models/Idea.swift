@@ -20,7 +20,7 @@ enum IdeaStatus: String, Codable, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .inbox:
-            "Inbox"
+            "메모"
         case .used:
             "사용함"
         case .archived:
@@ -62,6 +62,32 @@ final class Idea {
         }
     }
 
+    var displayTitle: String {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedTitle.isEmpty {
+            return trimmedTitle
+        }
+
+        return firstMeaningfulNoteLine ?? "제목 없는 메모"
+    }
+
+    var displayPreview: String? {
+        let meaningfulLines = notes
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return meaningfulLines.dropFirst().first
+        }
+
+        return meaningfulLines.first
+    }
+
+    var hasMemoContent: Bool {
+        !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     init(
         id: UUID = UUID(),
         title: String,
@@ -90,6 +116,13 @@ final class Idea {
     func updateStatus(_ status: IdeaStatus, now: Date = .now) {
         self.status = status
         self.updatedAt = now
+    }
+
+    private var firstMeaningfulNoteLine: String? {
+        notes
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty }
     }
 
     private static func encode(tags: [String]) -> String {

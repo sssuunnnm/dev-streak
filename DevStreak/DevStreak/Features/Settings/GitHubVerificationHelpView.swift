@@ -51,6 +51,19 @@ struct GitHubVerificationHelpView: View {
                         }
                     }
                 }
+
+                NavigationLink {
+                    GitHubConnectionSettingsView()
+                } label: {
+                    HStack(spacing: 8) {
+                        Text("GitHub 연결 설정")
+                            .font(DesignTokens.Typography.footnote)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(DesignTokens.Color.accent)
+                }
             }
             .padding(DesignTokens.Spacing.page)
         }

@@ -281,7 +281,7 @@ struct DashboardView: View {
                 }
 
                 saveErrorMessage = nil
-                githubVerificationState = .verified
+                githubVerificationState = .verified(includesToday: verificationResult.verifiedDateKeys.contains(verificationDateKey))
 
                 refreshWidgetSnapshot(records: snapshotRecords, now: verificationDate)
 
@@ -390,6 +390,8 @@ private struct PrimaryGoalCard: View {
                     .font(DesignTokens.Typography.heroMetric)
                     .foregroundStyle(DesignTokens.Color.primaryText)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.74)
                     .contentTransition(.numericText())
 
                 Text(isCompleted ? completionSource : "짧게라도 하나 남기면 오늘의 기록이 이어집니다.")
@@ -559,7 +561,7 @@ private struct IdeaInboxSummaryCard: View {
 private enum GitHubVerificationViewState: Equatable {
     case idle
     case checking
-    case verified
+    case verified(includesToday: Bool)
     case noActivity
     case failure(GitHubVerificationFailure)
     case unableToCheck
@@ -605,8 +607,8 @@ private enum GitHubVerificationViewState: Equatable {
             return isTodayCompleted ? "오늘 기록 완료" : "GitHub 확인 준비됨"
         case .checking:
             return "GitHub 기록 확인 중..."
-        case .verified:
-            return "GitHub에서 확인됨"
+        case .verified(let includesToday):
+            return includesToday ? "오늘 GitHub 기록 확인됨" : "최근 GitHub 기록 확인됨"
         case .noActivity:
             return "확인된 GitHub 기록 없음"
         case .failure(.rateLimited(let diagnostics)):
@@ -617,6 +619,8 @@ private enum GitHubVerificationViewState: Equatable {
             return "잠시 후 다시 확인해 주세요"
         case .failure(.unauthorizedOrForbidden):
             return "저장소에 접근할 수 없습니다"
+        case .failure(.credentialUnavailable):
+            return "저장된 GitHub 인증 정보를 불러오지 못했습니다"
         case .failure(.notFound):
             return "저장소를 찾을 수 없습니다"
         case .failure(.networkFailure):

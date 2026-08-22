@@ -110,9 +110,14 @@ struct GitHubConnectionSettingsView: View {
     }
 
     private func refreshSavedState() {
-        hasSavedToken = credentialStore.hasToken()
-        if !hasSavedToken, connectionState == .idle {
-            connectionState = .needsToken
+        do {
+            hasSavedToken = try credentialStore.hasToken()
+            if !hasSavedToken, connectionState == .idle {
+                connectionState = .needsToken
+            }
+        } catch {
+            hasSavedToken = false
+            connectionState = .failed(.credentialUnavailable)
         }
     }
 
@@ -120,10 +125,10 @@ struct GitHubConnectionSettingsView: View {
         do {
             try credentialStore.saveToken(token)
             token = ""
-            hasSavedToken = credentialStore.hasToken()
+            hasSavedToken = try credentialStore.hasToken()
             connectionState = hasSavedToken ? .saved : .needsToken
         } catch {
-            connectionState = .failed(.unknown)
+            connectionState = .failed(.credentialUnavailable)
         }
     }
 
@@ -134,7 +139,7 @@ struct GitHubConnectionSettingsView: View {
             hasSavedToken = false
             connectionState = .needsToken
         } catch {
-            connectionState = .failed(.unknown)
+            connectionState = .failed(.credentialUnavailable)
         }
     }
 
@@ -238,6 +243,8 @@ private extension GitHubVerificationFailure {
             return "GitHub 연결을 다시 확인해 주세요."
         case .notFound:
             return "dev-archive 저장소 접근 권한을 확인해 주세요."
+        case .credentialUnavailable:
+            return "저장된 GitHub 인증 정보를 불러오지 못했습니다."
         case .networkFailure:
             return "네트워크 연결을 확인해 주세요."
         case .budgetExceeded:
@@ -298,6 +305,7 @@ enum GitHubConnectionFailure: Error, Equatable {
     case invalidToken
     case forbidden
     case repositoryNotFound
+    case credentialUnavailable
     case rateLimited(GitHubRateLimitDiagnostics?)
     case networkFailure
     case decodingFailure
@@ -311,6 +319,8 @@ enum GitHubConnectionFailure: Error, Equatable {
             return "GitHub 접근 권한을 확인해 주세요."
         case .repositoryNotFound:
             return "dev-archive 저장소 접근 권한을 확인해 주세요."
+        case .credentialUnavailable:
+            return "저장된 GitHub 인증 정보를 불러오지 못했습니다."
         case .rateLimited(let diagnostics):
             if let resetAt = diagnostics?.resetAt {
                 return "\(resetAt.formatted(date: .omitted, time: .shortened)) 이후 다시 확인해 주세요."
@@ -348,6 +358,8 @@ struct GitHubConnectionTestService {
             return .success(repository)
         } catch let error as GitHubAPIError {
             return .failure(Self.failure(from: error))
+        } catch is GitHubCredentialError {
+            return .failure(.credentialUnavailable)
         } catch {
             return .failure(.unknown)
         }
@@ -357,6 +369,8 @@ struct GitHubConnectionTestService {
         switch error {
         case .rateLimited(let diagnostics):
             return .rateLimited(diagnostics)
+        case .credentialUnavailable:
+            return .credentialUnavailable
         case .unauthorized:
             return .invalidToken
         case .forbidden, .unauthorizedOrForbidden:

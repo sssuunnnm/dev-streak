@@ -25,12 +25,12 @@ struct GitHubCredentialStore {
         self.tokenStore = tokenStore
     }
 
-    func loadToken() -> String? {
-        try? tokenStore.loadToken()
+    func loadToken() throws -> String? {
+        try tokenStore.loadToken()
     }
 
-    func hasToken() -> Bool {
-        loadToken()?.isEmpty == false
+    func hasToken() throws -> Bool {
+        try loadToken()?.isEmpty == false
     }
 
     func saveToken(_ token: String) throws {
@@ -47,8 +47,8 @@ struct GitHubCredentialStore {
         try tokenStore.deleteToken()
     }
 
-    func authorizationHeader() -> String? {
-        guard let token = loadToken(), !token.isEmpty else {
+    func authorizationHeader() throws -> String? {
+        guard let token = try loadToken(), !token.isEmpty else {
             return nil
         }
 

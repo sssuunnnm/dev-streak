@@ -32,6 +32,7 @@ struct GitHubRateLimitDiagnostics: Equatable {
 
 enum GitHubAPIError: Error, Equatable {
     case rateLimited(GitHubRateLimitDiagnostics?)
+    case credentialUnavailable
     case unauthorized
     case forbidden
     case unauthorizedOrForbidden
@@ -77,13 +78,13 @@ protocol GitHubAPIClientProtocol {
 struct GitHubAPIClient: GitHubAPIClientProtocol {
     private let baseURL: URL
     private let session: URLSession
-    private let authorizationHeaderProvider: (() -> String?)?
+    private let authorizationHeaderProvider: (() throws -> String?)?
     private let dateFormatter: ISO8601DateFormatter
 
     init(
         baseURL: URL = URL(string: "https://api.github.com")!,
         session: URLSession = .shared,
-        authorizationHeaderProvider: (() -> String?)? = GitHubCredentialStore().authorizationHeader
+        authorizationHeaderProvider: (() throws -> String?)? = GitHubCredentialStore().authorizationHeader
     ) {
         self.baseURL = baseURL
         self.session = session
@@ -165,7 +166,14 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
 
-        if let authorizationHeader = authorizationHeaderProvider?(), !authorizationHeader.isEmpty {
+        let authorizationHeader: String?
+        do {
+            authorizationHeader = try authorizationHeaderProvider?()
+        } catch {
+            throw GitHubAPIError.credentialUnavailable
+        }
+
+        if let authorizationHeader, !authorizationHeader.isEmpty {
             request.setValue(authorizationHeader, forHTTPHeaderField: "Authorization")
         }
 
@@ -223,10 +231,12 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         case 401:
             throw GitHubAPIError.unauthorized
         case 403:
-            if httpResponse.value(forHTTPHeaderField: "X-RateLimit-Remaining") == "0" {
+            if httpResponse.isRateLimited {
                 throw GitHubAPIError.rateLimited(GitHubRateLimitDiagnostics(response: httpResponse))
             }
             throw GitHubAPIError.forbidden
+        case 429:
+            throw GitHubAPIError.rateLimited(GitHubRateLimitDiagnostics(response: httpResponse))
         case 404:
             throw GitHubAPIError.notFound
         default:
@@ -240,6 +250,11 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
 }
 
 private extension HTTPURLResponse {
+    var isRateLimited: Bool {
+        value(forHTTPHeaderField: "X-RateLimit-Remaining") == "0"
+        || value(forHTTPHeaderField: "Retry-After") != nil
+    }
+
     func integerHeader(_ name: String) -> Int? {
         guard let value = value(forHTTPHeaderField: name) else {
             return nil

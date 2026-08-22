@@ -239,10 +239,10 @@ private enum WidgetPalette {
 }
 
 private enum WidgetTypography {
-    static let caption = Font.system(size: 11, weight: .medium)
-    static let captionStrong = Font.system(size: 12, weight: .semibold)
-    static let metric = Font.system(size: 38, weight: .bold)
-    static let mediumMetric = Font.system(size: 42, weight: .bold)
+    static let caption = Font.caption2.weight(.medium)
+    static let captionStrong = Font.caption.weight(.semibold)
+    static let metric = Font.title.weight(.bold)
+    static let mediumMetric = Font.largeTitle.weight(.bold)
 }
 
 struct DevStreakWidget: Widget {

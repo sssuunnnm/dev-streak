@@ -10,6 +10,7 @@ import SwiftData
 
 enum GitHubVerificationFailure: Error, Equatable {
     case rateLimited(GitHubRateLimitDiagnostics?)
+    case credentialUnavailable
     case unauthorizedOrForbidden
     case notFound
     case networkFailure
@@ -131,6 +132,8 @@ struct GitHubVerificationService {
             return .failure(failure)
         } catch let error as GitHubAPIError {
             return .failure(Self.failure(from: error))
+        } catch is GitHubCredentialError {
+            return .failure(.credentialUnavailable)
         } catch {
             return .failure(.unknown)
         }
@@ -138,7 +141,7 @@ struct GitHubVerificationService {
 
     func verifiedActivity(now: Date = .now) async throws -> GitHubVerificationResult {
         let since = verificationStartDate(now: now)
-        var budget = GitHubVerificationBudget(maxRequestsPerVerification: requestLimit())
+        var budget = GitHubVerificationBudget(maxRequestsPerVerification: try requestLimit())
         var candidates: [GitHubCommitSummary] = []
 
         candidates += try await pagedCommits(
@@ -189,12 +192,12 @@ struct GitHubVerificationService {
         return GitHubVerificationResult(verifiedDateKeys: verifiedDateKeys)
     }
 
-    private func requestLimit() -> Int {
+    private func requestLimit() throws -> Int {
         if let maxRequestsPerVerification {
             return maxRequestsPerVerification
         }
 
-        return budgetPolicy.requestLimit(hasAuthentication: credentialStore.hasToken())
+        return budgetPolicy.requestLimit(hasAuthentication: try credentialStore.hasToken())
     }
 
     func deduplicated(_ commits: [GitHubCommitSummary]) -> [GitHubCommitSummary] {
@@ -286,6 +289,8 @@ struct GitHubVerificationService {
         switch error {
         case .rateLimited(let diagnostics):
             return .rateLimited(diagnostics)
+        case .credentialUnavailable:
+            return .credentialUnavailable
         case .unauthorized, .forbidden, .unauthorizedOrForbidden:
             return .unauthorizedOrForbidden
         case .notFound:
@@ -373,7 +378,6 @@ struct GitHubBackfillService {
 
         switch verificationResult {
         case .failure(let failure):
-            modelContext.rollback()
             return .failure(.verification(failure))
         case .success(let result):
             let updates = dailyRecordUpdater.applyVerified(

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Security
 import Testing
 @testable import DevStreak
 
@@ -76,6 +77,21 @@ struct GitHubVerificationServiceTests {
         let result = await Self.service(client: client).verify(now: Self.noon("2026-08-22"))
 
         #expect(result == .failure(.rateLimited(nil)))
+    }
+
+    @Test func credentialLoadFailureMapsToCredentialUnavailable() async {
+        let client = FakeGitHubAPIClient()
+        let tokenStore = FakeGitHubTokenStore(loadError: .keychainFailure(errSecInteractionNotAllowed))
+
+        let result = await Self.service(
+            client: client,
+            maxRequests: nil,
+            credentialStore: GitHubCredentialStore(tokenStore: tokenStore)
+        )
+        .verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .failure(.credentialUnavailable))
+        #expect(client.totalRequestCount == 0)
     }
 
     @Test func openPullRequestCommitCanVerifyDate() async throws {
@@ -348,9 +364,18 @@ struct GitHubVerificationServiceTests {
 
 private final class FakeGitHubTokenStore: GitHubTokenStoreProtocol {
     private var token: String?
+    private let loadError: GitHubCredentialError?
+
+    init(loadError: GitHubCredentialError? = nil) {
+        self.loadError = loadError
+    }
 
     func loadToken() throws -> String? {
-        token
+        if let loadError {
+            throw loadError
+        }
+
+        return token
     }
 
     func saveToken(_ token: String) throws {

@@ -220,6 +220,37 @@ struct GitHubDailyRecordUpdaterTests {
         #expect(reminderCancelCount == 0)
     }
 
+    @Test func backfillVerificationFailureDoesNotRollbackUnrelatedUnsavedChanges() async throws {
+        let context = try Self.inMemoryContext()
+        let draftIdea = Idea(
+            title: "저장 전 메모",
+            notes: "GitHub 검증과 무관한 미저장 변경",
+            createdAt: Self.now,
+            updatedAt: Self.now
+        )
+        context.insert(draftIdea)
+
+        let service = GitHubBackfillService(
+            verify: { _ in
+                .failure(.networkFailure)
+            },
+            dateService: DateService(calendar: Self.calendar),
+            updateWidgetSnapshot: { _, _, _ in },
+            cancelTodayReminders: { _ in }
+        )
+
+        let result = await service.backfill(
+            records: [],
+            ideas: [],
+            modelContext: context,
+            now: Self.noon("2026-08-22")
+        )
+        let ideas = try Self.ideas(in: context)
+
+        #expect(result == .failure(.verification(.networkFailure)))
+        #expect(ideas.contains { $0.title == "저장 전 메모" })
+    }
+
     @Test func backfillNoNewRecordsIsSuccessfulAndRefreshesWidget() async throws {
         let context = try Self.inMemoryContext()
         let existing = DailyRecord(
@@ -300,6 +331,10 @@ struct GitHubDailyRecordUpdaterTests {
 
     private static func records(in context: ModelContext) throws -> [DailyRecord] {
         try context.fetch(FetchDescriptor<DailyRecord>(sortBy: [SortDescriptor(\.dateKey)]))
+    }
+
+    private static func ideas(in context: ModelContext) throws -> [Idea] {
+        try context.fetch(FetchDescriptor<Idea>(sortBy: [SortDescriptor(\.title)]))
     }
 
     private static func noon(_ dateKey: String) -> Date {

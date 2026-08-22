@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Security
 import Testing
 @testable import DevStreak
 
@@ -190,6 +191,79 @@ struct GitHubAPIClientTests {
         }
     }
 
+    @Test func secondaryRateLimitRetryAfterOn403IsRateLimited() async throws {
+        let client = Self.client(
+            authorizationHeaderProvider: {
+                nil
+            },
+            response: .success(
+                statusCode: 403,
+                headers: ["Retry-After": "60"],
+                body: "{}"
+            ),
+            capturedHeaders: LockedHeaders()
+        )
+
+        do {
+            _ = try await client.openPullRequests(owner: "sssuunnnm", repository: "dev-archive", perPage: 20, page: 1)
+            Issue.record("Expected secondary rate limit failure.")
+        } catch GitHubAPIError.rateLimited(_) {
+            #expect(true)
+        }
+    }
+
+    @Test func http429IsRateLimited() async throws {
+        let client = Self.client(
+            authorizationHeaderProvider: {
+                nil
+            },
+            response: .success(statusCode: 429, headers: [:], body: "{}"),
+            capturedHeaders: LockedHeaders()
+        )
+
+        do {
+            _ = try await client.openPullRequests(owner: "sssuunnnm", repository: "dev-archive", perPage: 20, page: 1)
+            Issue.record("Expected rate limit failure.")
+        } catch GitHubAPIError.rateLimited(_) {
+            #expect(true)
+        }
+    }
+
+    @Test func regular403StaysForbidden() async throws {
+        let client = Self.client(
+            authorizationHeaderProvider: {
+                nil
+            },
+            response: .success(statusCode: 403, headers: [:], body: "{}"),
+            capturedHeaders: LockedHeaders()
+        )
+
+        do {
+            _ = try await client.openPullRequests(owner: "sssuunnnm", repository: "dev-archive", perPage: 20, page: 1)
+            Issue.record("Expected forbidden failure.")
+        } catch GitHubAPIError.forbidden {
+            #expect(true)
+        }
+    }
+
+    @Test func credentialLoadFailureDoesNotFallBackToUnauthenticatedRequest() async throws {
+        let tokenStore = InMemoryGitHubTokenStore(loadError: .keychainFailure(errSecInteractionNotAllowed))
+        let credentialStore = GitHubCredentialStore(tokenStore: tokenStore)
+        let capturedHeaders = LockedHeaders()
+        let client = Self.client(
+            authorizationHeaderProvider: credentialStore.authorizationHeader,
+            response: .success(statusCode: 200, headers: [:], body: "[]"),
+            capturedHeaders: capturedHeaders
+        )
+
+        do {
+            _ = try await client.openPullRequests(owner: "sssuunnnm", repository: "dev-archive", perPage: 20, page: 1)
+            Issue.record("Expected credential failure.")
+        } catch GitHubAPIError.credentialUnavailable {
+            #expect(capturedHeaders.path == nil)
+        }
+    }
+
     @Test func tokenIsNotIncludedInErrorDescription() async throws {
         let token = "github_pat_should_not_leak"
         let client = Self.client(
@@ -209,7 +283,7 @@ struct GitHubAPIClientTests {
     }
 
     private static func client(
-        authorizationHeaderProvider: @escaping () -> String?,
+        authorizationHeaderProvider: @escaping () throws -> String?,
         response: MockGitHubURLProtocol.Response,
         capturedHeaders: LockedHeaders
     ) -> GitHubAPIClient {
@@ -276,9 +350,18 @@ private final class LockedHeaders: @unchecked Sendable {
 
 private final class InMemoryGitHubTokenStore: GitHubTokenStoreProtocol {
     private var token: String?
+    private let loadError: GitHubCredentialError?
+
+    init(loadError: GitHubCredentialError? = nil) {
+        self.loadError = loadError
+    }
 
     func loadToken() throws -> String? {
-        token
+        if let loadError {
+            throw loadError
+        }
+
+        return token
     }
 
     func saveToken(_ token: String) throws {

@@ -22,9 +22,9 @@ enum IdeaStatus: String, Codable, CaseIterable, Identifiable {
         case .inbox:
             "Inbox"
         case .used:
-            "Used"
+            "사용함"
         case .archived:
-            "Archived"
+            "보관함"
         }
     }
 }

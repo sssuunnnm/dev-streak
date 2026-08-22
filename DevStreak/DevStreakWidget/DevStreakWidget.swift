@@ -55,35 +55,69 @@ struct DevStreakWidgetEntryView: View {
     let entry: DevStreakWidgetEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("DEV STREAK")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("DevStreak")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(WidgetPalette.secondaryText)
+
+                Spacer()
+
+                Image(systemName: entry.displayState.isTodayCompleted ? "checkmark.circle.fill" : "circle")
+                    .font(.caption.weight(.medium))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(entry.displayState.isTodayCompleted ? WidgetPalette.accent : WidgetPalette.secondaryText)
+            }
 
             Text(entry.displayState.goalText)
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .minimumScaleFactor(0.8)
+                .font(.system(size: 38, weight: .bold, design: .default))
+                .foregroundStyle(WidgetPalette.primaryText)
+                .monospacedDigit()
+                .minimumScaleFactor(0.76)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Current Streak")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+            WidgetStreakRow(streak: entry.displayState.currentStreak)
 
-                Text("🔥 \(entry.displayState.currentStreak) days")
-                    .font(.caption.weight(.semibold))
-            }
+            Spacer(minLength: 0)
 
-            if entry.displayState.pendingIdeaCount > 0 {
-                Text("\(entry.displayState.pendingIdeaCount) ideas waiting")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                Image(systemName: "lightbulb")
+                    .font(.caption2.weight(.semibold))
+
+                Text(entry.displayState.pendingIdeaCount > 0 ? "Idea \(entry.displayState.pendingIdeaCount)개 대기 중" : "대기 중인 Idea 없음")
+                    .font(.caption2.weight(.medium))
                     .lineLimit(1)
             }
+            .foregroundStyle(WidgetPalette.secondaryText)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .containerBackground(.background, for: .widget)
         .widgetURL(WidgetConstants.dashboardURL)
     }
+}
+
+private struct WidgetStreakRow: View {
+    let streak: Int
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "flame.fill")
+                .font(.caption.weight(.medium))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(WidgetPalette.streak)
+
+            Text("\(streak)일")
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(WidgetPalette.secondaryText)
+        }
+    }
+}
+
+private enum WidgetPalette {
+    static let primaryText = Color(red: 0.08, green: 0.12, blue: 0.18)
+    static let secondaryText = Color(red: 0.38, green: 0.47, blue: 0.57)
+    static let accent = Color(red: 0.25, green: 0.40, blue: 0.58)
+    static let streak = Color(red: 0.72, green: 0.43, blue: 0.16)
 }
 
 struct DevStreakWidget: Widget {
@@ -94,7 +128,7 @@ struct DevStreakWidget: Widget {
             DevStreakWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("DevStreak")
-        .description("Shows your daily writing status.")
+        .description("오늘 기록 상태를 보여줍니다.")
         .supportedFamilies([.systemSmall])
     }
 }

@@ -27,6 +27,7 @@ struct DashboardView: View {
     @State private var githubVerificationState: GitHubVerificationViewState = .idle
     @State private var githubVerificationTask: Task<Void, Never>?
     @State private var lastGitHubAutomaticVerificationAt: Date?
+    @State private var manualCompletionConfirmation = ManualCompletionConfirmationState()
 
     private var now: Date {
         Date()
@@ -56,63 +57,33 @@ struct DashboardView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Today")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
+                    DashboardHeader()
 
-                        Text(todayKey)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                    PrimaryGoalCard(
+                        dateKey: todayKey,
+                        isCompleted: isTodayCompleted,
+                        completionSource: completionSourceText,
+                        verificationState: githubVerificationState,
+                        reminderDestination: {
+                            ReminderSettingsView(isTodayCompleted: isTodayCompleted)
+                        },
+                        gitHubSettingsDestination: {
+                            GitHubConnectionSettingsView()
+                        },
+                        writeAction: {
+                            manualCompletionConfirmation.request()
+                        },
+                        refreshAction: verifyGitHubActivity
+                    )
 
-                        Text(isTodayCompleted ? "1 / 1" : "0 / 1")
-                            .font(.system(size: 56, weight: .bold, design: .rounded))
-                            .contentTransition(.numericText())
-
-                        Text(isTodayCompleted ? "Writing recorded for today." : "No writing activity yet.")
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Button(action: markTodayCompleted) {
-                        Label(isTodayCompleted ? "Completed Today" : "Write Today", systemImage: isTodayCompleted ? "checkmark.circle.fill" : "square.and.pencil")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(isTodayCompleted)
-
-                    HStack(spacing: 16) {
-                        streakMetric(title: "Current Streak", value: currentStreak)
-                        streakMetric(title: "Best Streak", value: bestStreak)
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Recent Activity")
-                            .font(.headline)
-
-                        if let todayRecord, todayRecord.status == .githubVerified {
-                            Text("GitHub writing activity verified today.")
-                                .foregroundStyle(.secondary)
-                        } else if let todayRecord, todayRecord.status.isCompleted {
-                            Text("Manual completion recorded today.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            Text("No writing activity yet.")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    githubVerificationSection
+                    StreakSummaryCard(currentStreak: currentStreak, bestStreak: bestStreak)
 
                     NavigationLink {
                         IdeaInboxView()
                     } label: {
-                        Label("Idea Inbox", systemImage: "lightbulb")
-                            .frame(maxWidth: .infinity)
+                        IdeaInboxSummaryCard(waitingCount: inboxIdeaCount)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
+                    .buttonStyle(.plain)
 
                     CalendarMonthView(records: records, now: now)
 
@@ -122,18 +93,10 @@ struct DashboardView: View {
                             .foregroundStyle(.red)
                     }
                 }
-                .padding()
+                .padding(DesignTokens.Spacing.page)
             }
-            .navigationTitle("DevStreak")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        ReminderSettingsView(isTodayCompleted: isTodayCompleted)
-                    } label: {
-                        Label("Reminder Settings", systemImage: "bell")
-                    }
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .task {
                 refreshWidgetSnapshot()
                 verifyGitHubActivityIfNeeded(now: Date())
@@ -154,49 +117,49 @@ struct DashboardView: View {
             .onOpenURL { url in
                 handleDeepLink(url)
             }
-        }
-    }
-
-    private var githubVerificationSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("GitHub")
-                        .font(.headline)
-
-                    Text(githubVerificationState.message(isTodayCompleted: isTodayCompleted))
-                        .font(.subheadline)
-                        .foregroundStyle(githubVerificationState.isError ? .red : .secondary)
+            .alert("오늘 기록을 완료했나요?", isPresented: manualCompletionBinding) {
+                Button("완료로 표시") {
+                    manualCompletionConfirmation.confirm {
+                        markTodayCompleted()
+                    }
                 }
 
-                Spacer()
-
-                Button(action: verifyGitHubActivity) {
-                    Label("Refresh", systemImage: "arrow.clockwise")
-                        .labelStyle(.iconOnly)
+                Button("취소", role: .cancel) {
+                    manualCompletionConfirmation.cancel()
                 }
-                .buttonStyle(.bordered)
-                .disabled(githubVerificationState == .checking)
+            } message: {
+                Text("기술 블로그에 오늘의 기록을 남겼다면 완료로 표시할 수 있습니다.")
             }
         }
-        .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    private func streakMetric(title: String, value: Int) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+    private var manualCompletionBinding: Binding<Bool> {
+        Binding(
+            get: {
+                manualCompletionConfirmation.isPresented
+            },
+            set: { isPresented in
+                if isPresented {
+                    manualCompletionConfirmation.request()
+                } else {
+                    manualCompletionConfirmation.cancel()
+                }
+            }
+        )
+    }
 
-            Text("\(value) days")
-                .font(.title3.weight(.semibold))
+    private var completionSourceText: String {
+        if let todayRecord, todayRecord.status == .githubVerified {
+            return "GitHub에서 기록 확인"
+        } else if let todayRecord, todayRecord.status.isCompleted {
+            return "오늘 기록 완료"
+        } else {
+            return "아직 오늘 기록이 없어요"
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var inboxIdeaCount: Int {
+        ideas.filter { $0.status == .inbox }.count
     }
 
     private func markTodayCompleted() {
@@ -227,7 +190,7 @@ struct DashboardView: View {
                 await reminderNotificationService.cancelTodayReminders(now: completionDate)
             }
         } catch {
-            saveErrorMessage = "Could not save today's record."
+            saveErrorMessage = "오늘 기록을 저장하지 못했습니다."
         }
     }
 
@@ -332,12 +295,275 @@ struct DashboardView: View {
                 }
             } catch {
                 modelContext.rollback()
-                saveErrorMessage = "Could not save GitHub verification."
+                saveErrorMessage = "GitHub 확인 결과를 저장하지 못했습니다."
                 githubVerificationState = .unableToCheck
             }
         case .failure(let failure):
             githubVerificationState = .failure(failure)
         }
+    }
+}
+
+private struct DashboardHeader: View {
+    var body: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("DevStreak")
+                    .font(.largeTitle.weight(.bold))
+                    .foregroundStyle(DesignTokens.Color.primaryText)
+
+                Text("기술 기록을 꾸준히 쌓는 공간")
+                    .font(.subheadline)
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
+            }
+
+            Spacer()
+        }
+    }
+}
+
+private struct PrimaryGoalCard<ReminderDestination: View, GitHubSettingsDestination: View>: View {
+    let dateKey: String
+    let isCompleted: Bool
+    let completionSource: String
+    let verificationState: GitHubVerificationViewState
+    let reminderDestination: ReminderDestination
+    let gitHubSettingsDestination: GitHubSettingsDestination
+    let writeAction: () -> Void
+    let refreshAction: () -> Void
+
+    init(
+        dateKey: String,
+        isCompleted: Bool,
+        completionSource: String,
+        verificationState: GitHubVerificationViewState,
+        @ViewBuilder reminderDestination: () -> ReminderDestination,
+        @ViewBuilder gitHubSettingsDestination: () -> GitHubSettingsDestination,
+        writeAction: @escaping () -> Void,
+        refreshAction: @escaping () -> Void
+    ) {
+        self.dateKey = dateKey
+        self.isCompleted = isCompleted
+        self.completionSource = completionSource
+        self.verificationState = verificationState
+        self.reminderDestination = reminderDestination()
+        self.gitHubSettingsDestination = gitHubSettingsDestination()
+        self.writeAction = writeAction
+        self.refreshAction = refreshAction
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.tight) {
+                    Text("오늘")
+                        .font(.headline)
+                        .foregroundStyle(DesignTokens.Color.primaryText)
+
+                    Text(dateKey)
+                        .font(.subheadline)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+                }
+
+                Spacer()
+
+                NavigationLink {
+                    reminderDestination
+                } label: {
+                    Image(systemName: "bell")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(DesignTokens.Color.accent)
+                        .frame(width: 34, height: 34)
+                        .background {
+                            RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
+                                .fill(DesignTokens.Color.surface)
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("알림 설정")
+            }
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    if isCompleted {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 24, weight: .semibold))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(DesignTokens.Color.success)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+
+                    Text(isCompleted ? "1 / 1" : "0 / 1")
+                        .font(.system(size: 49, weight: .bold, design: .default))
+                        .foregroundStyle(DesignTokens.Color.primaryText)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                }
+
+                Text(isCompleted ? completionSource : "짧게라도 하나 남기면 오늘의 기록이 이어집니다.")
+                    .font(.subheadline)
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
+            }
+
+            if !isCompleted {
+                Button(action: writeAction) {
+                    Label("오늘 기록 완료", systemImage: "checkmark.circle")
+                }
+                .buttonStyle(TactileButtonStyle(tint: DesignTokens.Color.accent))
+            }
+
+            GitHubVerificationRow(
+                state: verificationState,
+                isTodayCompleted: isCompleted,
+                settingsDestination: {
+                    gitHubSettingsDestination
+                },
+                refreshAction: refreshAction
+            )
+
+            Divider()
+                .overlay(DesignTokens.Color.hairline)
+        }
+        .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isCompleted)
+    }
+}
+
+private struct GitHubVerificationRow<SettingsDestination: View>: View {
+    let state: GitHubVerificationViewState
+    let isTodayCompleted: Bool
+    let settingsDestination: SettingsDestination
+    let refreshAction: () -> Void
+
+    init(
+        state: GitHubVerificationViewState,
+        isTodayCompleted: Bool,
+        @ViewBuilder settingsDestination: () -> SettingsDestination,
+        refreshAction: @escaping () -> Void
+    ) {
+        self.state = state
+        self.isTodayCompleted = isTodayCompleted
+        self.settingsDestination = settingsDestination()
+        self.refreshAction = refreshAction
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: state.symbolName)
+                .font(.system(size: 16, weight: .medium))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(state.tint)
+                .frame(width: 22)
+                .symbolEffect(.rotate, options: .repeating, value: state == .checking)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("GitHub 기록 확인")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
+
+                Text(state.message(isTodayCompleted: isTodayCompleted))
+                    .font(.footnote)
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
+            }
+
+            Spacer()
+
+            NavigationLink {
+                settingsDestination
+            } label: {
+                Image(systemName: "key")
+                    .font(.system(size: 14, weight: .semibold))
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(DesignTokens.Color.textSecondary)
+            .accessibilityLabel("GitHub 연결 설정")
+
+            Button(action: refreshAction) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(DesignTokens.Color.accent)
+            .contentShape(Rectangle())
+            .scaleEffect(state == .checking ? 0.96 : 1)
+            .disabled(state == .checking)
+        }
+    }
+}
+
+private struct StreakSummaryCard: View {
+    let currentStreak: Int
+    let bestStreak: Int
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.tight) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "flame.fill")
+                            .font(.caption2.weight(.medium))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(DesignTokens.Color.streakWarm)
+                            .opacity(0.75)
+
+                        Text("연속 기록")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(DesignTokens.Color.textSecondary)
+                    }
+
+                    Text("\(currentStreak)일")
+                        .font(DesignTokens.Typography.roundedMetric)
+                        .foregroundStyle(DesignTokens.Color.primaryText)
+                        .monospacedDigit()
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: DesignTokens.Spacing.tight) {
+                    Text("최고 기록")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+
+                    Text("\(bestStreak)일")
+                        .font(.headline)
+                        .monospacedDigit()
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+                }
+            }
+        }
+    }
+}
+
+private struct IdeaInboxSummaryCard: View {
+    let waitingCount: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "lightbulb")
+                .font(.system(size: 18, weight: .medium))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(DesignTokens.Color.accent)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.tight) {
+                Text("Idea Inbox")
+                    .font(.headline)
+                    .foregroundStyle(DesignTokens.Color.primaryText)
+
+                Text("\(waitingCount)개 대기 중")
+                    .font(.subheadline)
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
+                    .monospacedDigit()
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(DesignTokens.Color.textSecondary)
+        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -358,28 +584,60 @@ private enum GitHubVerificationViewState: Equatable {
         }
     }
 
+    var symbolName: String {
+        switch self {
+        case .idle:
+            return "checkmark.seal"
+        case .checking:
+            return "arrow.triangle.2.circlepath"
+        case .verified:
+            return "checkmark.seal.fill"
+        case .noActivity:
+            return "smallcircle.filled.circle"
+        case .failure, .unableToCheck:
+            return "exclamationmark.circle"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .verified:
+            return DesignTokens.Color.success
+        case .failure, .unableToCheck:
+            return DesignTokens.Color.warning
+        case .checking:
+            return DesignTokens.Color.accent
+        case .idle, .noActivity:
+            return DesignTokens.Color.textSecondary
+        }
+    }
+
     func message(isTodayCompleted: Bool) -> String {
         switch self {
         case .idle:
-            return isTodayCompleted ? "Writing recorded." : "Ready to check."
+            return isTodayCompleted ? "기록 완료" : "확인 준비됨"
         case .checking:
-            return "Checking..."
+            return "확인 중..."
         case .verified:
-            return "Verified ✓"
+            return "확인됨"
         case .noActivity:
-            return isTodayCompleted ? "No GitHub writing activity yet." : "No writing activity yet."
-        case .failure(.rateLimited):
-            return "Rate limited. Try again later."
+            return isTodayCompleted ? "아직 GitHub 기록은 없어요" : "아직 기록이 없어요"
+        case .failure(.rateLimited(let diagnostics)):
+            if let resetAt = diagnostics?.resetAt {
+                return "\(resetAt.formatted(date: .omitted, time: .shortened)) 이후 다시 확인해 주세요"
+            }
+
+            return "잠시 후 다시 확인해 주세요"
         case .failure(.unauthorizedOrForbidden):
-            return "Unable to access repository."
+            return "저장소에 접근할 수 없습니다"
         case .failure(.notFound):
-            return "Repository not found."
+            return "저장소를 찾을 수 없습니다"
         case .failure(.networkFailure):
-            return "Network unavailable. Retry."
+            return "네트워크를 확인해 주세요"
         case .failure(.decodingFailure), .failure(.unknown), .unableToCheck:
-            return "Unable to check. Retry."
+            return "확인하지 못했습니다"
         case .failure(.budgetExceeded):
-            return "Unable to complete verification. Retry."
+            return "확인을 완료하지 못했습니다"
         }
     }
 }

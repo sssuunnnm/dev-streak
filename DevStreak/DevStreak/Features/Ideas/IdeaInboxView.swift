@@ -30,20 +30,22 @@ struct IdeaInboxView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Idea Status", selection: $selectedStatus) {
+            Picker("Idea 상태", selection: $selectedStatus) {
                 ForEach(IdeaStatus.allCases) { status in
                     Text(status.title).tag(status)
                 }
             }
             .pickerStyle(.segmented)
-            .padding()
+            .padding(.horizontal, DesignTokens.Spacing.page)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
 
             List {
                 if filteredIdeas.isEmpty {
                     ContentUnavailableView(
                         selectedStatus.title,
-                        systemImage: "tray",
-                        description: Text(emptyMessage)
+                        systemImage: emptySystemImage,
+                    description: Text(emptyMessage)
                     )
                 } else {
                     ForEach(filteredIdeas) { idea in
@@ -52,6 +54,7 @@ struct IdeaInboxView: View {
                         } label: {
                             IdeaRowView(idea: idea)
                         }
+                        .listRowSeparator(.visible)
                     }
                 }
             }
@@ -63,7 +66,7 @@ struct IdeaInboxView: View {
                 Button {
                     isShowingNewIdea = true
                 } label: {
-                    Label("New Idea", systemImage: "plus")
+                    Label("새 Idea", systemImage: "plus")
                 }
             }
         }
@@ -83,11 +86,22 @@ struct IdeaInboxView: View {
     private var emptyMessage: String {
         switch selectedStatus {
         case .inbox:
-            "No ideas yet."
+            "아직 Idea가 없습니다."
         case .used:
-            "No used ideas yet."
+            "사용한 Idea가 없습니다."
         case .archived:
-            "No archived ideas yet."
+            "보관한 Idea가 없습니다."
+        }
+    }
+
+    private var emptySystemImage: String {
+        switch selectedStatus {
+        case .inbox:
+            "tray"
+        case .used:
+            "checkmark.circle"
+        case .archived:
+            "archivebox"
         }
     }
 
@@ -100,25 +114,80 @@ private struct IdeaRowView: View {
     let idea: Idea
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(idea.title)
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: idea.status.iconName)
+                    .font(.caption.weight(.medium))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(idea.status.tint)
+
+                Text(idea.title)
+                    .font(.headline)
+                    .foregroundStyle(DesignTokens.Color.primaryText)
+            }
 
             if !idea.notes.isEmpty {
                 Text(idea.notes)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
                     .lineLimit(2)
             }
 
             if !idea.tags.isEmpty {
-                Text(idea.tags.joined(separator: ", "))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(idea.tags, id: \.self) { tag in
+                            TagChip(title: tag)
+                        }
+                    }
+                }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 9)
+    }
+}
+
+struct TagChip: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(DesignTokens.Color.textSecondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background {
+                Capsule()
+                    .fill(DesignTokens.Color.surface)
+                    .overlay {
+                        Capsule()
+                            .stroke(DesignTokens.Color.hairline)
+                    }
+            }
+    }
+}
+
+private extension IdeaStatus {
+    var iconName: String {
+        switch self {
+        case .inbox:
+            "lightbulb"
+        case .used:
+            "checkmark.circle"
+        case .archived:
+            "archivebox"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .inbox:
+            DesignTokens.Color.accent
+        case .used:
+            DesignTokens.Color.success
+        case .archived:
+            DesignTokens.Color.textSecondary
+        }
     }
 }
 

@@ -19,33 +19,26 @@ struct ReminderSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Notification Permission") {
-                Text(permissionMessage)
-                    .foregroundStyle(.secondary)
-
-                switch authorizationStatus {
-                case .notDetermined:
-                    Button("알림 허용하기") {
+            Section {
+                PermissionStatusCard(
+                    status: authorizationStatus,
+                    message: permissionMessage,
+                    requestPermission: {
                         Task {
                             await requestPermission()
                         }
-                    }
-                case .denied:
-                    Button("iOS Settings 열기") {
-                        openAppSettings()
-                    }
-                case .authorized, .provisional, .ephemeral:
-                    EmptyView()
-                }
+                    },
+                    openSettings: openAppSettings
+                )
             }
 
-            Section("Reminders") {
+            Section("리마인더") {
                 reminderRow(slot: .morning)
                 reminderRow(slot: .evening)
                 reminderRow(slot: .night)
             }
         }
-        .navigationTitle("Reminder Settings")
+        .navigationTitle("알림 설정")
         .task {
             settings = store.load()
             await refreshAuthorizationStatus()
@@ -58,7 +51,7 @@ struct ReminderSettingsView: View {
         case .notDetermined:
             "알림 권한이 아직 결정되지 않았습니다."
         case .denied:
-            "알림이 iOS Settings에서 비활성화되어 있습니다."
+            "알림이 iOS 설정에서 꺼져 있습니다."
         case .authorized:
             "알림이 활성화되어 있습니다."
         case .provisional:
@@ -71,8 +64,10 @@ struct ReminderSettingsView: View {
     private func reminderRow(slot: ReminderSlot) -> some View {
         let preference = settings.preference(for: slot)
 
-        return VStack(alignment: .leading, spacing: 8) {
-            Toggle(slot.title, isOn: Binding(
+        return ReminderPreferenceRow(
+            slot: slot,
+            preference: preference,
+            isEnabled: Binding(
                 get: {
                     settings.preference(for: slot).isEnabled
                 },
@@ -81,9 +76,8 @@ struct ReminderSettingsView: View {
                     updatedPreference.isEnabled = isEnabled
                     updatePreference(updatedPreference, for: slot)
                 }
-            ))
-
-            DatePicker("Time", selection: Binding(
+            ),
+            selectedDate: Binding(
                 get: {
                     date(for: preference)
                 },
@@ -94,9 +88,8 @@ struct ReminderSettingsView: View {
                     updatedPreference.minute = components.minute ?? slot.defaultMinute
                     updatePreference(updatedPreference, for: slot)
                 }
-            ), displayedComponents: .hourAndMinute)
-            .disabled(!settings.preference(for: slot).isEnabled)
-        }
+            )
+        )
     }
 
     private func updatePreference(_ preference: ReminderPreference, for slot: ReminderSlot) {
@@ -139,6 +132,132 @@ struct ReminderSettingsView: View {
         }
 
         UIApplication.shared.open(url)
+    }
+}
+
+private struct PermissionStatusCard: View {
+    let status: ReminderAuthorizationStatus
+    let message: String
+    let requestPermission: () -> Void
+    let openSettings: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: iconName)
+                    .font(.system(size: 15, weight: .medium))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(tint)
+
+                Text("알림 권한")
+                    .font(.headline)
+                    .foregroundStyle(DesignTokens.Color.primaryText)
+            }
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(DesignTokens.Color.textSecondary)
+
+            switch status {
+            case .notDetermined:
+                Button("알림 허용하기", action: requestPermission)
+                    .buttonStyle(.bordered)
+            case .denied:
+                Button("iOS 설정 열기", action: openSettings)
+                    .buttonStyle(.bordered)
+            case .authorized, .provisional, .ephemeral:
+                EmptyView()
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var iconName: String {
+        switch status {
+        case .notDetermined:
+            "bell.badge"
+        case .denied:
+            "bell.slash"
+        case .authorized, .provisional, .ephemeral:
+            "bell.badge.fill"
+        }
+    }
+
+    private var tint: Color {
+        switch status {
+        case .notDetermined:
+            DesignTokens.Color.accent
+        case .denied:
+            DesignTokens.Color.warning
+        case .authorized, .provisional, .ephemeral:
+            DesignTokens.Color.success
+        }
+    }
+}
+
+private struct ReminderPreferenceRow: View {
+    let slot: ReminderSlot
+    let preference: ReminderPreference
+    @Binding var isEnabled: Bool
+    @Binding var selectedDate: Date
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Image(systemName: slot.iconName)
+                    .font(.system(size: 16, weight: .medium))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(slot.tint)
+                    .frame(width: 22)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(slot.title)
+                        .font(.headline)
+                        .foregroundStyle(DesignTokens.Color.primaryText)
+
+                    Text(timeText)
+                        .font(.caption)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+                }
+
+                Spacer()
+
+                Toggle(slot.title, isOn: $isEnabled)
+                    .labelsHidden()
+            }
+
+            DatePicker("시간", selection: $selectedDate, displayedComponents: .hourAndMinute)
+                .disabled(!isEnabled)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var timeText: String {
+        String(format: "%02d:%02d", preference.hour, preference.minute)
+    }
+}
+
+private extension ReminderSlot {
+    var iconName: String {
+        switch self {
+        case .morning:
+            "sun.max"
+        case .evening:
+            "sunset"
+        case .night:
+            "moon"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .morning:
+            DesignTokens.Color.textSecondary
+        case .evening:
+            DesignTokens.Color.textSecondary
+        case .night:
+            DesignTokens.Color.textSecondary
+        }
     }
 }
 

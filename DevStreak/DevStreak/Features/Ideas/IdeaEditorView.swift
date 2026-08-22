@@ -36,19 +36,26 @@ struct IdeaEditorView: View {
 
     var body: some View {
         Form {
-            Section("Title") {
-                TextField("Title", text: $title)
+            Section {
+                TextField("제목", text: $title)
+                    .font(.title3.weight(.semibold))
+            } header: {
+                Text("제목")
             }
 
-            Section("Notes") {
+            Section {
                 TextEditor(text: $notes)
                     .frame(minHeight: 160)
+            } header: {
+                Text("메모")
             }
 
-            Section("Tags") {
+            Section {
                 TextField("swift, ios", text: $tagsText)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+            } header: {
+                Text("태그")
             }
 
             if let saveErrorMessage {
@@ -58,16 +65,16 @@ struct IdeaEditorView: View {
                 }
             }
         }
-        .navigationTitle(idea == nil ? "New Idea" : "Edit Idea")
+        .navigationTitle(idea == nil ? "새 Idea" : "Idea 수정")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
+                Button("취소") {
                     dismiss()
                 }
             }
 
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save", action: save)
+                Button("저장", action: save)
                     .disabled(!canSave)
             }
         }
@@ -99,7 +106,7 @@ struct IdeaEditorView: View {
             try modelContext.save()
             dismiss()
         } catch {
-            saveErrorMessage = "Could not save idea."
+            saveErrorMessage = "Idea를 저장하지 못했습니다."
         }
     }
 }

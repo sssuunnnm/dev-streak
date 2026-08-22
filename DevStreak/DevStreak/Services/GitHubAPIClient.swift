@@ -7,8 +7,31 @@
 
 import Foundation
 
+struct GitHubRateLimitDiagnostics: Equatable {
+    let limit: Int?
+    let remaining: Int?
+    let resetAt: Date?
+
+    init(limit: Int?, remaining: Int?, resetAt: Date?) {
+        self.limit = limit
+        self.remaining = remaining
+        self.resetAt = resetAt
+    }
+
+    init(response: HTTPURLResponse) {
+        limit = response.integerHeader("X-RateLimit-Limit")
+        remaining = response.integerHeader("X-RateLimit-Remaining")
+
+        if let resetTimestamp = response.integerHeader("X-RateLimit-Reset") {
+            resetAt = Date(timeIntervalSince1970: TimeInterval(resetTimestamp))
+        } else {
+            resetAt = nil
+        }
+    }
+}
+
 enum GitHubAPIError: Error, Equatable {
-    case rateLimited
+    case rateLimited(GitHubRateLimitDiagnostics?)
     case unauthorizedOrForbidden
     case notFound
     case networkFailure
@@ -51,7 +74,7 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
     init(
         baseURL: URL = URL(string: "https://api.github.com")!,
         session: URLSession = .shared,
-        authorizationHeaderProvider: (() -> String?)? = nil
+        authorizationHeaderProvider: (() -> String?)? = GitHubCredentialStore().authorizationHeader
     ) {
         self.baseURL = baseURL
         self.session = session
@@ -180,7 +203,7 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
             return httpResponse
         case 401, 403:
             if httpResponse.value(forHTTPHeaderField: "X-RateLimit-Remaining") == "0" {
-                throw GitHubAPIError.rateLimited
+                throw GitHubAPIError.rateLimited(GitHubRateLimitDiagnostics(response: httpResponse))
             }
             throw GitHubAPIError.unauthorizedOrForbidden
         case 404:
@@ -192,6 +215,16 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
 
     private func hasNextPage(_ response: HTTPURLResponse) -> Bool {
         response.value(forHTTPHeaderField: "Link")?.contains("rel=\"next\"") == true
+    }
+}
+
+private extension HTTPURLResponse {
+    func integerHeader(_ name: String) -> Int? {
+        guard let value = value(forHTTPHeaderField: name) else {
+            return nil
+        }
+
+        return Int(value)
     }
 }
 

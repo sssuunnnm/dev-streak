@@ -14,7 +14,7 @@ struct CalendarMonthView: View {
     private let dateService = DateService()
     private let calendarService = HabitCalendarService()
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
-    private let weekdaySymbols = ["M", "T", "W", "T", "F", "S", "S"]
+    private let weekdaySymbols = ["월", "화", "수", "목", "금", "토", "일"]
 
     private var monthDays: [HabitCalendarDay] {
         calendarService.days(containing: now, records: records, now: now)
@@ -37,29 +37,44 @@ struct CalendarMonthView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(dateService.monthTitle(containing: now))
+                    Text("이번 달")
                         .font(.headline)
+                        .foregroundStyle(DesignTokens.Color.primaryText)
 
-                    Text("\(monthlyRate.completedDays) / \(monthlyRate.eligibleDays) completed")
+                    Text(dateService.monthTitle(containing: now))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
                 }
 
                 Spacer()
 
-                Text(rateText)
-                    .font(.title3.weight(.semibold))
-                    .monospacedDigit()
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(rateText)
+                        .font(.headline.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(DesignTokens.Color.accent)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background {
+                            Capsule()
+                                .fill(DesignTokens.Color.accentSoft)
+                        }
+
+                    Text("\(monthlyRate.eligibleDays)일 중 \(monthlyRate.completedDays)일 기록")
+                        .font(.caption2)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+                        .monospacedDigit()
+                }
             }
 
             LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(weekdaySymbols.indices, id: \.self) { index in
                     Text(weekdaySymbols[index])
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
                         .frame(maxWidth: .infinity)
                 }
 
@@ -81,11 +96,15 @@ private struct CalendarDayCell: View {
 
     var body: some View {
         ZStack {
-            Circle()
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.small, style: .continuous)
                 .fill(backgroundStyle)
+                .overlay {
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.small, style: .continuous)
+                        .stroke(borderStyle, lineWidth: borderWidth)
+                }
 
             Text("\(day.dayNumber)")
-                .font(.caption.weight(.semibold))
+                .font(.caption2.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(foregroundStyle)
         }
@@ -96,11 +115,11 @@ private struct CalendarDayCell: View {
     private var backgroundStyle: Color {
         switch day.status {
         case .completed:
-            .green
+            DesignTokens.Color.accent.opacity(0.86)
         case .missed:
-            .red.opacity(0.15)
+            DesignTokens.Color.missed.opacity(0.72)
         case .pending:
-            .blue.opacity(0.18)
+            .clear
         case .future:
             .clear
         }
@@ -111,12 +130,29 @@ private struct CalendarDayCell: View {
         case .completed:
             .white
         case .missed:
-            .red
+            DesignTokens.Color.textSecondary.opacity(0.78)
         case .pending:
-            .blue
+            DesignTokens.Color.accent
         case .future:
-            .secondary.opacity(0.45)
+            DesignTokens.Color.textSecondary.opacity(0.45)
         }
+    }
+
+    private var borderStyle: Color {
+        switch day.status {
+        case .completed:
+            DesignTokens.Color.accent.opacity(0.86)
+        case .pending:
+            DesignTokens.Color.accent.opacity(0.72)
+        case .missed:
+            DesignTokens.Color.hairline.opacity(0.70)
+        case .future:
+            .clear
+        }
+    }
+
+    private var borderWidth: CGFloat {
+        day.status == .pending ? 1.5 : 1
     }
 
     private var accessibilityLabel: String {

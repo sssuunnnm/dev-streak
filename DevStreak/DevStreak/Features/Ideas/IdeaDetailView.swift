@@ -24,39 +24,46 @@ struct IdeaDetailView: View {
 
     var body: some View {
         List {
-            Section("Title") {
+            Section {
                 Text(idea.title)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(DesignTokens.Color.primaryText)
+                    .padding(.vertical, 4)
+            } header: {
+                Text("제목")
             }
 
-            Section("Notes") {
-                Text(idea.notes.isEmpty ? "No notes." : idea.notes)
+            Section("메모") {
+                Text(idea.notes.isEmpty ? "메모가 없습니다." : idea.notes)
                     .foregroundStyle(idea.notes.isEmpty ? .secondary : .primary)
             }
 
-            Section("Tags") {
+            Section("태그") {
                 if idea.tags.isEmpty {
-                    Text("No tags.")
-                        .foregroundStyle(.secondary)
+                    Text("태그가 없습니다.")
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
                 } else {
-                    Text(idea.tags.joined(separator: ", "))
+                    FlowTagLayout(tags: idea.tags)
                 }
             }
 
-            Section("Status") {
-                Text(idea.status.title)
+            Section("상태") {
+                Label(idea.status.title, systemImage: idea.status.detailIconName)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(DesignTokens.Color.textSecondary)
             }
 
             Section {
                 Button {
                     writeWithClaude()
                 } label: {
-                    Label("Write with Claude", systemImage: "doc.on.clipboard")
+                    Label("Claude로 글쓰기", systemImage: "doc.on.clipboard")
                 }
 
                 Button {
                     updateStatus(.used)
                 } label: {
-                    Label("Mark as Used", systemImage: "checkmark.circle")
+                    Label("사용함으로 표시", systemImage: "checkmark.circle")
                 }
                 .disabled(idea.status == .used)
 
@@ -64,13 +71,13 @@ struct IdeaDetailView: View {
                     Button {
                         updateStatus(.inbox)
                     } label: {
-                        Label("Restore to Inbox", systemImage: "arrow.uturn.backward")
+                        Label("Inbox로 복구", systemImage: "arrow.uturn.backward")
                     }
                 } else {
                     Button {
                         updateStatus(.archived)
                     } label: {
-                        Label("Archive", systemImage: "archivebox")
+                        Label("보관하기", systemImage: "archivebox")
                     }
                 }
             }
@@ -79,14 +86,15 @@ struct IdeaDetailView: View {
                 Button(role: .destructive) {
                     isShowingDeleteConfirmation = true
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label("삭제", systemImage: "trash")
                 }
             }
 
             if let actionMessage {
                 Section {
                     Text(actionMessage)
-                        .foregroundStyle(.secondary)
+                        .font(.footnote)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
                 }
             }
         }
@@ -96,7 +104,7 @@ struct IdeaDetailView: View {
                 Button {
                     isShowingEditor = true
                 } label: {
-                    Label("Edit", systemImage: "pencil")
+                    Label("수정", systemImage: "pencil")
                 }
             }
         }
@@ -105,15 +113,15 @@ struct IdeaDetailView: View {
                 IdeaEditorView(idea: idea)
             }
         }
-        .confirmationDialog("Delete this idea?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
-            Button("Delete", role: .destructive, action: deleteIdea)
-            Button("Cancel", role: .cancel) {}
+        .confirmationDialog("이 Idea를 삭제할까요?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
+            Button("삭제", role: .destructive, action: deleteIdea)
+            Button("취소", role: .cancel) {}
         }
     }
 
     private func writeWithClaude() {
         UIPasteboard.general.string = promptService.prompt(for: idea)
-        actionMessage = "Prompt copied to clipboard."
+        actionMessage = "프롬프트를 클립보드에 복사했습니다."
 
         guard let url = URL(string: "https://claude.ai/") else {
             return
@@ -141,8 +149,35 @@ struct IdeaDetailView: View {
             return true
         } catch {
             modelContext.rollback()
-            actionMessage = "Could not save changes."
+            actionMessage = "변경사항을 저장하지 못했습니다."
             return false
+        }
+    }
+}
+
+private struct FlowTagLayout: View {
+    let tags: [String]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(tags, id: \.self) { tag in
+                    TagChip(title: tag)
+                }
+            }
+        }
+    }
+}
+
+private extension IdeaStatus {
+    var detailIconName: String {
+        switch self {
+        case .inbox:
+            "tray"
+        case .used:
+            "checkmark.circle"
+        case .archived:
+            "archivebox"
         }
     }
 }

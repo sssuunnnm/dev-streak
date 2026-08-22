@@ -8,7 +8,7 @@
 import Foundation
 
 enum GitHubVerificationFailure: Error, Equatable {
-    case rateLimited
+    case rateLimited(GitHubRateLimitDiagnostics?)
     case unauthorizedOrForbidden
     case notFound
     case networkFailure
@@ -246,8 +246,8 @@ struct GitHubVerificationService {
 
     private static func failure(from error: GitHubAPIError) -> GitHubVerificationFailure {
         switch error {
-        case .rateLimited:
-            return .rateLimited
+        case .rateLimited(let diagnostics):
+            return .rateLimited(diagnostics)
         case .unauthorizedOrForbidden:
             return .unauthorizedOrForbidden
         case .notFound:

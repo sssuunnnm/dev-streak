@@ -71,11 +71,11 @@ struct GitHubVerificationServiceTests {
 
     @Test func apiRateLimitMapsToFailureState() async {
         let client = FakeGitHubAPIClient()
-        client.error = .rateLimited
+        client.error = .rateLimited(nil)
 
         let result = await Self.service(client: client).verify(now: Self.noon("2026-08-22"))
 
-        #expect(result == .failure(.rateLimited))
+        #expect(result == .failure(.rateLimited(nil)))
     }
 
     @Test func openPullRequestCommitCanVerifyDate() async throws {

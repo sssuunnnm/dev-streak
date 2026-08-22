@@ -98,5 +98,45 @@ struct GitHubDailyRecordUpdaterTests {
         #expect(update.shouldRunCompletionSideEffects)
     }
 
+    @Test func multipleVerifiedDateKeysAreAllApplied() {
+        let pastManual = DailyRecord(
+            dateKey: "2026-08-20",
+            status: .manualCompleted,
+            completedAt: Self.now,
+            createdAt: Self.now
+        )
+        let existingVerified = DailyRecord(
+            dateKey: "2026-08-21",
+            status: .githubVerified,
+            completedAt: Self.now,
+            createdAt: Self.now
+        )
+
+        let updates = updater.applyVerified(
+            dateKeys: ["2026-08-20", "2026-08-21", "2026-08-22"],
+            records: [pastManual, existingVerified],
+            now: Self.now
+        )
+
+        #expect(updates.count == 3)
+        #expect(pastManual.status == .githubVerified)
+        #expect(existingVerified.status == .githubVerified)
+        #expect(updates.contains { if case .created(let record) = $0 { record.dateKey == "2026-08-22" } else { false } })
+    }
+
+    @Test func pastOnlyVerificationDoesNotRequireTodayReminderCancel() {
+        let verifiedDateKeys: Set<String> = ["2026-08-20", "2026-08-21"]
+        let todayKey = "2026-08-22"
+
+        #expect(!verifiedDateKeys.contains(todayKey))
+    }
+
+    @Test func pastVerificationStillRequiresWidgetRefreshAfterSave() {
+        let update = updater.applyVerified(dateKey: "2026-08-20", records: [], now: Self.now)
+
+        #expect(update.requiresSave)
+        #expect(update.shouldRunCompletionSideEffects)
+    }
+
     private static let now = Date(timeIntervalSince1970: 1_787_321_600)
 }

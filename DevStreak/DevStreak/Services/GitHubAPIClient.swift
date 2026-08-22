@@ -30,10 +30,15 @@ struct GitHubCommitDetail: Equatable {
     let filenames: [String]
 }
 
+struct GitHubPage<Value: Equatable>: Equatable {
+    let values: [Value]
+    let hasNextPage: Bool
+}
+
 protocol GitHubAPIClientProtocol {
-    func commits(owner: String, repository: String, ref: String, since: Date?, perPage: Int) async throws -> [GitHubCommitSummary]
-    func openPullRequests(owner: String, repository: String, perPage: Int) async throws -> [GitHubPullRequest]
-    func pullRequestCommits(owner: String, repository: String, number: Int, perPage: Int) async throws -> [GitHubCommitSummary]
+    func commits(owner: String, repository: String, ref: String, since: Date?, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary>
+    func openPullRequests(owner: String, repository: String, perPage: Int, page: Int) async throws -> GitHubPage<GitHubPullRequest>
+    func pullRequestCommits(owner: String, repository: String, number: Int, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary>
     func commitDetail(owner: String, repository: String, sha: String) async throws -> GitHubCommitDetail
 }
 
@@ -54,10 +59,11 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         self.dateFormatter = ISO8601DateFormatter()
     }
 
-    func commits(owner: String, repository: String, ref: String, since: Date?, perPage: Int) async throws -> [GitHubCommitSummary] {
+    func commits(owner: String, repository: String, ref: String, since: Date?, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary> {
         var queryItems = [
             URLQueryItem(name: "sha", value: ref),
-            URLQueryItem(name: "per_page", value: "\(perPage)")
+            URLQueryItem(name: "per_page", value: "\(perPage)"),
+            URLQueryItem(name: "page", value: "\(page)")
         ]
 
         if let since {
@@ -65,31 +71,38 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         }
 
         let request = try request(path: "/repos/\(owner)/\(repository)/commits", queryItems: queryItems)
-        let dtos: [GitHubCommitSummaryDTO] = try await load(request)
-        return try dtos.map { try $0.domainValue(formatter: dateFormatter) }
+        let page: GitHubPage<GitHubCommitSummaryDTO> = try await loadPage(request)
+        return GitHubPage(
+            values: try page.values.map { try $0.domainValue(formatter: dateFormatter) },
+            hasNextPage: page.hasNextPage
+        )
     }
 
-    func openPullRequests(owner: String, repository: String, perPage: Int) async throws -> [GitHubPullRequest] {
+    func openPullRequests(owner: String, repository: String, perPage: Int, page: Int) async throws -> GitHubPage<GitHubPullRequest> {
         let request = try request(path: "/repos/\(owner)/\(repository)/pulls", queryItems: [
             URLQueryItem(name: "state", value: "open"),
-            URLQueryItem(name: "per_page", value: "\(perPage)")
+            URLQueryItem(name: "per_page", value: "\(perPage)"),
+            URLQueryItem(name: "page", value: "\(page)")
         ])
-        let dtos: [GitHubPullRequestDTO] = try await load(request)
-        return dtos.map { GitHubPullRequest(number: $0.number) }
+        let page: GitHubPage<GitHubPullRequestDTO> = try await loadPage(request)
+        return GitHubPage(values: page.values.map { GitHubPullRequest(number: $0.number) }, hasNextPage: page.hasNextPage)
     }
 
-    func pullRequestCommits(owner: String, repository: String, number: Int, perPage: Int) async throws -> [GitHubCommitSummary] {
+    func pullRequestCommits(owner: String, repository: String, number: Int, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary> {
         let request = try request(path: "/repos/\(owner)/\(repository)/pulls/\(number)/commits", queryItems: [
-            URLQueryItem(name: "per_page", value: "\(perPage)")
+            URLQueryItem(name: "per_page", value: "\(perPage)"),
+            URLQueryItem(name: "page", value: "\(page)")
         ])
-        let dtos: [GitHubCommitSummaryDTO] = try await load(request)
-        return try dtos.map { try $0.domainValue(formatter: dateFormatter) }
+        let page: GitHubPage<GitHubCommitSummaryDTO> = try await loadPage(request)
+        return GitHubPage(
+            values: try page.values.map { try $0.domainValue(formatter: dateFormatter) },
+            hasNextPage: page.hasNextPage
+        )
     }
 
     func commitDetail(owner: String, repository: String, sha: String) async throws -> GitHubCommitDetail {
         let request = try request(path: "/repos/\(owner)/\(repository)/commits/\(sha)", queryItems: [])
-        let dto: GitHubCommitDetailDTO = try await load(request)
-        return GitHubCommitDetail(sha: dto.sha, filenames: dto.files.map(\.filename))
+        return try await loadObject(request)
     }
 
     private func request(path: String, queryItems: [URLQueryItem]) throws -> URLRequest {
@@ -116,7 +129,7 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
         return request
     }
 
-    private func load<T: Decodable>(_ request: URLRequest) async throws -> T {
+    private func loadObject(_ request: URLRequest) async throws -> GitHubCommitDetail {
         let data: Data
         let response: URLResponse
 
@@ -126,17 +139,45 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
             throw GitHubAPIError.networkFailure
         }
 
+        try validate(response: response)
+
+        do {
+            let dto = try JSONDecoder().decode(GitHubCommitDetailDTO.self, from: data)
+            return GitHubCommitDetail(sha: dto.sha, filenames: dto.files.map(\.filename))
+        } catch {
+            throw GitHubAPIError.decodingFailure
+        }
+    }
+
+    private func loadPage<T: Decodable & Equatable>(_ request: URLRequest) async throws -> GitHubPage<T> {
+        let data: Data
+        let response: URLResponse
+
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw GitHubAPIError.networkFailure
+        }
+
+        let httpResponse = try validate(response: response)
+
+        do {
+            let decoded = try JSONDecoder().decode([T].self, from: data)
+            return GitHubPage(values: decoded, hasNextPage: hasNextPage(httpResponse))
+        } catch {
+            throw GitHubAPIError.decodingFailure
+        }
+    }
+
+    @discardableResult
+    private func validate(response: URLResponse) throws -> HTTPURLResponse {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw GitHubAPIError.networkFailure
         }
 
         switch httpResponse.statusCode {
         case 200..<300:
-            do {
-                return try JSONDecoder().decode(T.self, from: data)
-            } catch {
-                throw GitHubAPIError.decodingFailure
-            }
+            return httpResponse
         case 401, 403:
             if httpResponse.value(forHTTPHeaderField: "X-RateLimit-Remaining") == "0" {
                 throw GitHubAPIError.rateLimited
@@ -148,9 +189,13 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
             throw GitHubAPIError.unexpectedStatus(httpResponse.statusCode)
         }
     }
+
+    private func hasNextPage(_ response: HTTPURLResponse) -> Bool {
+        response.value(forHTTPHeaderField: "Link")?.contains("rel=\"next\"") == true
+    }
 }
 
-private struct GitHubCommitSummaryDTO: Decodable {
+private struct GitHubCommitSummaryDTO: Decodable, Equatable {
     let sha: String
     let commit: CommitDTO
 
@@ -164,17 +209,17 @@ private struct GitHubCommitSummaryDTO: Decodable {
         return GitHubCommitSummary(sha: sha, timestamp: timestamp)
     }
 
-    struct CommitDTO: Decodable {
+    struct CommitDTO: Decodable, Equatable {
         let author: TimestampDTO?
         let committer: TimestampDTO?
     }
 
-    struct TimestampDTO: Decodable {
+    struct TimestampDTO: Decodable, Equatable {
         let date: String
     }
 }
 
-private struct GitHubPullRequestDTO: Decodable {
+private struct GitHubPullRequestDTO: Decodable, Equatable {
     let number: Int
 }
 

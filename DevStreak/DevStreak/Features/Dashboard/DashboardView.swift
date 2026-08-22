@@ -21,10 +21,12 @@ struct DashboardView: View {
     private let widgetSnapshotService = WidgetSnapshotService()
     private let githubVerificationService = GitHubVerificationService()
     private let githubDailyRecordUpdater = GitHubDailyRecordUpdater()
+    private let githubAutoRefreshPolicy = GitHubVerificationAutoRefreshPolicy()
 
     @State private var saveErrorMessage: String?
     @State private var githubVerificationState: GitHubVerificationViewState = .idle
     @State private var githubVerificationTask: Task<Void, Never>?
+    @State private var lastGitHubAutomaticVerificationAt: Date?
 
     private var now: Date {
         Date()
@@ -134,7 +136,7 @@ struct DashboardView: View {
             }
             .task {
                 refreshWidgetSnapshot()
-                verifyGitHubActivityIfNeeded()
+                verifyGitHubActivityIfNeeded(now: Date())
                 await syncReminderSchedule()
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -143,7 +145,7 @@ struct DashboardView: View {
                 }
 
                 refreshWidgetSnapshot()
-                verifyGitHubActivityIfNeeded()
+                verifyGitHubActivityIfNeeded(now: Date())
 
                 Task {
                     await syncReminderSchedule()
@@ -251,21 +253,29 @@ struct DashboardView: View {
         }
     }
 
-    private func verifyGitHubActivityIfNeeded() {
-        guard githubVerificationState == .idle else {
+    private func verifyGitHubActivityIfNeeded(now: Date) {
+        guard githubAutoRefreshPolicy.shouldRunAutomaticVerification(
+            now: now,
+            lastAutomaticVerificationAt: lastGitHubAutomaticVerificationAt,
+            isTaskRunning: githubVerificationTask != nil
+        ) else {
             return
         }
 
-        verifyGitHubActivity()
+        lastGitHubAutomaticVerificationAt = now
+        verifyGitHubActivity(now: now)
     }
 
     private func verifyGitHubActivity() {
+        verifyGitHubActivity(now: Date())
+    }
+
+    private func verifyGitHubActivity(now verificationDate: Date) {
         guard githubVerificationTask == nil else {
             return
         }
 
         githubVerificationState = .checking
-        let verificationDate = Date()
 
         githubVerificationTask = Task {
             let result = await githubVerificationService.verify(now: verificationDate)
@@ -285,35 +295,37 @@ struct DashboardView: View {
         case .success(let verificationResult):
             let verificationDateKey = dateService.todayKey(now: verificationDate)
 
-            guard verificationResult.verifiedDateKeys.contains(verificationDateKey) else {
+            guard verificationResult.hasActivity else {
                 githubVerificationState = .noActivity
                 return
             }
 
-            let update = githubDailyRecordUpdater.applyVerified(
-                dateKey: verificationDateKey,
+            let updates = githubDailyRecordUpdater.applyVerified(
+                dateKeys: verificationResult.verifiedDateKeys,
                 records: records,
                 now: verificationDate
             )
 
             var snapshotRecords = records
 
-            if case .created(let record) = update {
-                modelContext.insert(record)
-                snapshotRecords.append(record)
+            for update in updates {
+                if case .created(let record) = update {
+                    modelContext.insert(record)
+                    snapshotRecords.append(record)
+                }
             }
 
             do {
-                if update.requiresSave {
+                if updates.contains(where: \.requiresSave) {
                     try modelContext.save()
                 }
 
                 saveErrorMessage = nil
                 githubVerificationState = .verified
 
-                if update.shouldRunCompletionSideEffects {
-                    refreshWidgetSnapshot(records: snapshotRecords, now: verificationDate)
+                refreshWidgetSnapshot(records: snapshotRecords, now: verificationDate)
 
+                if verificationResult.verifiedDateKeys.contains(verificationDateKey) {
                     Task {
                         await reminderNotificationService.cancelTodayReminders(now: verificationDate)
                     }
@@ -366,6 +378,8 @@ private enum GitHubVerificationViewState: Equatable {
             return "Network unavailable. Retry."
         case .failure(.decodingFailure), .failure(.unknown), .unableToCheck:
             return "Unable to check. Retry."
+        case .failure(.budgetExceeded):
+            return "Unable to complete verification. Retry."
         }
     }
 }

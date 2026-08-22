@@ -34,6 +34,12 @@ enum GitHubDailyRecordUpdate {
 }
 
 struct GitHubDailyRecordUpdater {
+    func applyVerified(dateKeys: Set<String>, records: [DailyRecord], now: Date = .now) -> [GitHubDailyRecordUpdate] {
+        dateKeys.sorted().map { dateKey in
+            applyVerified(dateKey: dateKey, records: records, now: now)
+        }
+    }
+
     func applyVerified(dateKey: String, records: [DailyRecord], now: Date = .now) -> GitHubDailyRecordUpdate {
         if let record = records.first(where: { $0.dateKey == dateKey }) {
             guard record.status != .githubVerified else {

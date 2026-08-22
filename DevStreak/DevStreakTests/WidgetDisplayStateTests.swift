@@ -26,7 +26,7 @@ struct WidgetDisplayStateTests {
         #expect(state.currentStreak == 4)
     }
 
-    @Test func staleSnapshotDoesNotShowTodayCompleted() {
+    @Test func staleSnapshotFallsBackForDateSensitiveValues() {
         let snapshot = WidgetSnapshot(
             dateKey: "2026-08-21",
             isTodayCompleted: true,
@@ -39,6 +39,7 @@ struct WidgetDisplayStateTests {
 
         #expect(!state.isTodayCompleted)
         #expect(state.goalText == "0 / 1")
-        #expect(state.currentStreak == 4)
+        #expect(state.currentStreak == 0)
+        #expect(state.pendingIdeaCount == 0)
     }
 }

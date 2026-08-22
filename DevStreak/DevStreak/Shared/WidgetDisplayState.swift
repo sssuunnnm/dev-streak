@@ -19,11 +19,19 @@ struct WidgetDisplayState: Equatable {
     }
 
     static func make(snapshot: WidgetSnapshot, currentDateKey: String) -> WidgetDisplayState {
-        let isCurrentDate = snapshot.dateKey == currentDateKey
+        guard snapshot.dateKey == currentDateKey else {
+            return WidgetDisplayState(
+                dateKey: currentDateKey,
+                isTodayCompleted: false,
+                currentStreak: 0,
+                pendingIdeaCount: 0,
+                updatedAt: snapshot.updatedAt
+            )
+        }
 
         return WidgetDisplayState(
             dateKey: currentDateKey,
-            isTodayCompleted: isCurrentDate && snapshot.isTodayCompleted,
+            isTodayCompleted: snapshot.isTodayCompleted,
             currentStreak: snapshot.currentStreak,
             pendingIdeaCount: snapshot.pendingIdeaCount,
             updatedAt: snapshot.updatedAt

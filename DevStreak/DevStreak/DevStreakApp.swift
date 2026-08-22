@@ -29,5 +29,6 @@ struct DevStreakApp: App {
             DashboardView()
         }
         .modelContainer(sharedModelContainer)
+        .handlesExternalEvents(matching: ["dashboard"])
     }
 }

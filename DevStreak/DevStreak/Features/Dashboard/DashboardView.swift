@@ -644,7 +644,7 @@ private enum GitHubVerificationViewState: Equatable {
         case .failure(.decodingFailure), .failure(.unknown), .unableToCheck:
             return "확인하지 못했습니다"
         case .failure(.budgetExceeded):
-            return "확인을 완료하지 못했습니다"
+            return "GitHub 기록이 많아 확인을 완료하지 못했습니다"
         }
     }
 }

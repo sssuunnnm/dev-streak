@@ -190,6 +190,61 @@ struct GitHubVerificationServiceTests {
         #expect(result == .failure(.budgetExceeded))
     }
 
+    @Test func authenticatedDefaultBudgetAllowsMoreThanConservativeLimit() async {
+        let client = FakeGitHubAPIClient()
+        let commits = (1...25).map { Self.commit("content-\($0)", "2026-08-22") }
+        client.mainCommitPages = [
+            GitHubPage(values: commits, hasNextPage: false)
+        ]
+        for commit in commits {
+            client.details[commit.sha] = GitHubCommitDetail(
+                sha: commit.sha,
+                filenames: ["src/content/articles/\(commit.sha).md"]
+            )
+        }
+        let tokenStore = FakeGitHubTokenStore()
+        try? tokenStore.saveToken("github_pat_secret")
+
+        let result = await Self.service(
+            client: client,
+            maxRequests: nil,
+            credentialStore: GitHubCredentialStore(tokenStore: tokenStore)
+        )
+        .verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .success(GitHubVerificationResult(verifiedDateKeys: ["2026-08-22"])))
+        #expect(client.totalRequestCount == 27)
+    }
+
+    @Test func unauthenticatedDefaultBudgetKeepsConservativeLimit() async {
+        let client = FakeGitHubAPIClient()
+        let commits = (1...25).map { Self.commit("content-\($0)", "2026-08-22") }
+        client.mainCommitPages = [
+            GitHubPage(values: commits, hasNextPage: false)
+        ]
+
+        let result = await Self.service(
+            client: client,
+            maxRequests: nil,
+            credentialStore: GitHubCredentialStore(tokenStore: FakeGitHubTokenStore())
+        )
+        .verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .failure(.budgetExceeded))
+    }
+
+    @Test func emptyVerifiedDateKeysAreSuccessNotFailure() async {
+        let client = FakeGitHubAPIClient()
+        client.mainCommitPages = [
+            GitHubPage(values: [Self.commit("docs", "2026-08-22")], hasNextPage: false)
+        ]
+        client.details["docs"] = GitHubCommitDetail(sha: "docs", filenames: ["README.md"])
+
+        let result = await Self.service(client: client).verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .success(GitHubVerificationResult(verifiedDateKeys: [])))
+    }
+
     @Test func detailCacheAvoidsRepeatedRequestForSameSHAAcrossRuns() async throws {
         let client = FakeGitHubAPIClient()
         let cache = GitHubCommitDetailCache()
@@ -208,14 +263,16 @@ struct GitHubVerificationServiceTests {
     private static func service(
         client: FakeGitHubAPIClient,
         cache: GitHubCommitDetailCache = GitHubCommitDetailCache(),
-        maxRequests: Int = 20
+        maxRequests: Int? = 20,
+        credentialStore: GitHubCredentialStore = GitHubCredentialStore(tokenStore: FakeGitHubTokenStore())
     ) -> GitHubVerificationService {
         GitHubVerificationService(
             client: client,
             dateService: DateService(calendar: calendar),
             detailCache: cache,
             lookbackDays: 7,
-            maxRequestsPerVerification: maxRequests
+            maxRequestsPerVerification: maxRequests,
+            credentialStore: credentialStore
         )
     }
 
@@ -243,6 +300,22 @@ struct GitHubVerificationServiceTests {
 
     private static func utcDate(_ value: String) -> Date {
         ISO8601DateFormatter().date(from: value)!
+    }
+}
+
+private final class FakeGitHubTokenStore: GitHubTokenStoreProtocol {
+    private var token: String?
+
+    func loadToken() throws -> String? {
+        token
+    }
+
+    func saveToken(_ token: String) throws {
+        self.token = token
+    }
+
+    func deleteToken() throws {
+        token = nil
     }
 }
 

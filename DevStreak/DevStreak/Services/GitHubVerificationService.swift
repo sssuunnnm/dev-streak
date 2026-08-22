@@ -42,6 +42,23 @@ struct GitHubVerificationBudget {
     }
 }
 
+struct GitHubVerificationBudgetPolicy {
+    let unauthenticatedRequestLimit: Int
+    let authenticatedRequestLimit: Int
+
+    init(
+        unauthenticatedRequestLimit: Int = 20,
+        authenticatedRequestLimit: Int = 120
+    ) {
+        self.unauthenticatedRequestLimit = unauthenticatedRequestLimit
+        self.authenticatedRequestLimit = authenticatedRequestLimit
+    }
+
+    func requestLimit(hasAuthentication: Bool) -> Int {
+        hasAuthentication ? authenticatedRequestLimit : unauthenticatedRequestLimit
+    }
+}
+
 actor GitHubCommitDetailCache {
     private var contentPathBySHA: [String: Bool] = [:]
 
@@ -65,7 +82,9 @@ struct GitHubVerificationService {
     private let lookbackDays: Int
     private let commitListLimit: Int
     private let pullRequestLimit: Int
-    private let maxRequestsPerVerification: Int
+    private let maxRequestsPerVerification: Int?
+    private let budgetPolicy: GitHubVerificationBudgetPolicy
+    private let credentialStore: GitHubCredentialStore
 
     init(
         client: GitHubAPIClientProtocol = GitHubAPIClient(),
@@ -78,7 +97,9 @@ struct GitHubVerificationService {
         lookbackDays: Int = 7,
         commitListLimit: Int = 30,
         pullRequestLimit: Int = 20,
-        maxRequestsPerVerification: Int = 20
+        maxRequestsPerVerification: Int? = nil,
+        budgetPolicy: GitHubVerificationBudgetPolicy = GitHubVerificationBudgetPolicy(),
+        credentialStore: GitHubCredentialStore = GitHubCredentialStore()
     ) {
         self.client = client
         self.dateService = dateService
@@ -91,6 +112,8 @@ struct GitHubVerificationService {
         self.commitListLimit = commitListLimit
         self.pullRequestLimit = pullRequestLimit
         self.maxRequestsPerVerification = maxRequestsPerVerification
+        self.budgetPolicy = budgetPolicy
+        self.credentialStore = credentialStore
     }
 
     func verify(now: Date = .now) async -> Result<GitHubVerificationResult, GitHubVerificationFailure> {
@@ -108,7 +131,7 @@ struct GitHubVerificationService {
 
     func verifiedActivity(now: Date = .now) async throws -> GitHubVerificationResult {
         let since = verificationStartDate(now: now)
-        var budget = GitHubVerificationBudget(maxRequestsPerVerification: maxRequestsPerVerification)
+        var budget = GitHubVerificationBudget(maxRequestsPerVerification: requestLimit())
         var candidates: [GitHubCommitSummary] = []
 
         candidates += try await pagedCommits(
@@ -157,6 +180,14 @@ struct GitHubVerificationService {
         }
 
         return GitHubVerificationResult(verifiedDateKeys: verifiedDateKeys)
+    }
+
+    private func requestLimit() -> Int {
+        if let maxRequestsPerVerification {
+            return maxRequestsPerVerification
+        }
+
+        return budgetPolicy.requestLimit(hasAuthentication: credentialStore.hasToken())
     }
 
     func deduplicated(_ commits: [GitHubCommitSummary]) -> [GitHubCommitSummary] {

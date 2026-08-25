@@ -92,12 +92,12 @@ Targets:
 
 Bundle identifiers:
 
-- App: `com.sssuunnnm.DevStreak`
-- Widget: `com.sssuunnnm.DevStreak.DevStreakWidget`
+- App: `com.sssuunnnm.DevStreakApp`
+- Widget: `com.sssuunnnm.DevStreakApp.DevStreakWidget`
 
 App Group:
 
-- `group.com.sssuunnnm.DevStreak.shared`
+- `group.com.sssuunnnm.DevStreakApp.shared`
 
 ## 4. Main User Flow
 

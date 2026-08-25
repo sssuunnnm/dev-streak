@@ -192,7 +192,7 @@ Widget은 SwiftData store를 직접 열지 않습니다. App target이 현재 �
 공유 App Group:
 
 ```text
-group.com.sssuunnnm.DevStreak.shared
+group.com.sssuunnnm.DevStreakApp.shared
 ```
 
 Snapshot 구조:
@@ -474,8 +474,8 @@ Targets:
 
 Bundle identifiers:
 
-- App: `com.sssuunnnm.DevStreak`
-- Widget: `com.sssuunnnm.DevStreak.DevStreakWidget`
+- App: `com.sssuunnnm.DevStreakApp`
+- Widget: `com.sssuunnnm.DevStreakApp.DevStreakWidget`
 
 ## Build & Test
 

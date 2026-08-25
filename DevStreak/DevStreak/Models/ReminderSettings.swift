@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct ReminderPreference: Codable, Equatable {
+nonisolated struct ReminderPreference: Codable, Equatable {
     var isEnabled: Bool
     var hour: Int
     var minute: Int
@@ -23,7 +23,7 @@ struct ReminderPreference: Codable, Equatable {
     }
 }
 
-struct ReminderSettings: Codable, Equatable {
+nonisolated struct ReminderSettings: Codable, Equatable {
     var morning: ReminderPreference
     var evening: ReminderPreference
     var night: ReminderPreference

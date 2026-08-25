@@ -1,6 +1,6 @@
 # DevStreak
 
-DevStreak는 개인 기술 블로그 작성 습관을 유지하기 위한 iOS companion app입니다.
+DevStreak는 개인 GitHub 기록 습관을 유지하기 위한 iOS companion app입니다.
 
 블로그 CMS나 배포 도구가 아니라, 하루에 최소 하나의 개발 기록을 남겼는지 확인하고 이어갈 수 있도록 돕는 로컬 우선 생산성 앱입니다.
 
@@ -28,14 +28,16 @@ DevStreak는 다음 원칙을 기준으로 구현되어 있습니다.
 - GitHub write operation 없음
 - Claude API 직접 연동 없음
 - Backend infrastructure 없음
+- Analytics / tracking SDK 없음
 - Token은 source code나 UserDefaults에 저장하지 않고 Keychain에만 저장
+- 작성 기록, 아이디어, 리마인더 설정, GitHub token을 개발자 서버로 수집하지 않음
 - 날짜와 timezone 처리는 `DateService`에서 명시적으로 처리
 
 ## Core User Flow
 
 1. Dashboard에서 오늘 기록 상태와 streak를 확인합니다.
-2. 기술 블로그에 오늘의 기록을 남겼다면 `오늘 기록 완료`로 수동 완료 처리할 수 있습니다.
-3. GitHub 연결이 설정되어 있으면 DevStreak가 최근 GitHub 콘텐츠 활동을 read-only로 확인합니다.
+2. 오늘 GitHub 기록을 남겼다면 `오늘 기록 완료`로 수동 완료 처리할 수 있습니다.
+3. DevStreak가 최근 GitHub 콘텐츠 활동을 read-only로 확인합니다. Public repository는 token 없이 확인할 수 있고, Fine-grained PAT는 안정적인 요청을 위한 선택 사항입니다.
 4. 글감은 `아이디어 메모`에 저장하고, 필요할 때 Claude prompt로 복사해 넘깁니다.
 5. Widget과 알림은 앱을 열지 않아도 오늘 기록 상태를 계속 상기시킵니다.
 
@@ -110,7 +112,7 @@ Reminder는 UserNotifications 기반 local notification으로 동작합니다.
 - 저녁 18:00
 - 밤 22:00
 
-각 slot은 개별 enable/disable과 시간 변경을 지원합니다. 설정은 `ReminderSettingsStore`를 통해 UserDefaults에 저장됩니다.
+각 slot은 개별 enable/disable과 시간 변경을 지원합니다. 변경된 설정은 사용자가 `변경사항 적용`을 확인한 뒤 `ReminderSettingsStore`를 통해 UserDefaults에 저장됩니다.
 
 Scheduling 정책:
 
@@ -217,7 +219,7 @@ Widget tap은 `devstreak://dashboard` deep link로 app을 엽니다.
 
 ### GitHub Verification
 
-GitHub integration은 기술 블로그 repository의 실제 콘텐츠 작성 활동을 확인하기 위한 read-only verification입니다.
+GitHub integration은 repository의 실제 콘텐츠 작성 활동을 확인하기 위한 read-only verification입니다.
 
 대상 repository:
 
@@ -227,20 +229,23 @@ sssuunnnm/dev-archive
 
 인증:
 
-- Fine-grained PAT 지원
+- Public unauthenticated API fallback
+- Fine-grained PAT 선택 지원
 - Token은 Keychain에만 저장
 - Token이 있으면 `Authorization: Bearer <token>` 사용
-- Token이 없으면 public unauthenticated API로 fallback
 - GitHub write permission 없음
+- Token이 저장되어 있으면 입력칸은 숨기고 연결 테스트와 삭제만 제공합니다.
 
 Dashboard verification:
 
 - 기본 lookback: 최근 7일
 - main branch commits 조회
 - open Pull Request commits 조회
+- working branch 직접 등록/검사는 현재 MVP 범위 밖
 - SHA dedupe
 - commit detail 조회
 - changed files가 인정 경로에 포함되는지 확인
+- 오늘 기록이 이미 `githubVerified`이면 앱 재진입 시 자동 verification을 다시 실행하지 않음
 
 인정 경로:
 
@@ -393,6 +398,26 @@ Design system은 `DesignTokens`, `SoftDepthCard`, `IconPlate`, `TactileButtonSty
 - Backend 없음
 - Claude API 호출 없음
 
+## Privacy
+
+DevStreak는 local-first app입니다. 개발자는 사용자의 작성 기록, 아이디어, 리마인더 설정, GitHub token을 수집하거나 서버로 전송하지 않습니다.
+
+Privacy Policy는 [PRIVACY.md](PRIVACY.md)에 보관하고, 배포용 공개 URL은 [DevStreak Privacy Policy](https://sssuunnnm.notion.site/DevStreak-Privacy-Policy-3c70f65e84d680c0a1e0e02425ccc7d2)입니다. 연락 이메일은 `sssuunnnm@gmail.com`입니다.
+
+Local data:
+
+- DailyRecord와 Idea는 기기 내 SwiftData에 저장
+- Reminder 설정은 기기 내 UserDefaults에 저장
+- Widget 공유 상태는 App Group UserDefaults에 최소 snapshot만 저장
+- GitHub token은 선택 사항이며 Keychain에만 저장
+
+Network behavior:
+
+- GitHub verification은 `sssuunnnm/dev-archive` repository의 read-only GitHub REST API 요청만 수행
+- Token이 있으면 GitHub API Authorization header에만 사용
+- Claude API 직접 호출 없음
+- Analytics SDK, tracking SDK, backend infrastructure 없음
+
 ## Testing
 
 테스트는 Swift Testing과 XCTest UI Tests로 구성되어 있습니다.
@@ -420,10 +445,11 @@ Design system은 `DesignTokens`, `SoftDepthCard`, `IconPlate`, `TactileButtonSty
 최근 검증 기준:
 
 ```text
+Last verified: 2026-08-25
 App build: succeeded
 Widget build: succeeded
 Full xcodebuild test: succeeded
-Tests: 127 passed
+Tests: 128 passed
 ```
 
 ## Requirements
@@ -431,7 +457,7 @@ Tests: 127 passed
 현재 Xcode project 설정 기준:
 
 - Xcode with iOS 26.5 SDK
-- iOS deployment target: 26.5
+- iOS deployment target: 17.0
 - SwiftUI
 - SwiftData
 - WidgetKit

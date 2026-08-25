@@ -45,6 +45,10 @@ struct DashboardView: View {
         todayRecord?.status.isCompleted == true
     }
 
+    private var isTodayGitHubVerified: Bool {
+        todayRecord?.status == .githubVerified
+    }
+
     private var currentStreak: Int {
         streakService.currentStreak(records: records, now: now)
     }
@@ -96,6 +100,7 @@ struct DashboardView: View {
             .toolbar(.hidden, for: .navigationBar)
             .task {
                 refreshWidgetSnapshot()
+                refreshCachedGitHubVerificationState()
                 verifyGitHubActivityIfNeeded(now: Date())
                 await syncReminderSchedule()
             }
@@ -105,6 +110,7 @@ struct DashboardView: View {
                 }
 
                 refreshWidgetSnapshot()
+                refreshCachedGitHubVerificationState()
                 verifyGitHubActivityIfNeeded(now: Date())
 
                 Task {
@@ -125,7 +131,7 @@ struct DashboardView: View {
                     manualCompletionConfirmation.cancel()
                 }
             } message: {
-                Text("기술 블로그에 오늘의 기록을 남겼다면 완료로 표시할 수 있습니다.")
+                Text("오늘 GitHub 기록을 남겼다면 완료로 표시할 수 있습니다.")
             }
         }
     }
@@ -217,7 +223,8 @@ struct DashboardView: View {
         guard githubAutoRefreshPolicy.shouldRunAutomaticVerification(
             now: now,
             lastAutomaticVerificationAt: lastGitHubAutomaticVerificationAt,
-            isTaskRunning: githubVerificationTask != nil
+            isTaskRunning: githubVerificationTask != nil,
+            isTodayAlreadyGitHubVerified: isTodayGitHubVerified
         ) else {
             return
         }
@@ -228,6 +235,14 @@ struct DashboardView: View {
 
     private func verifyGitHubActivity() {
         verifyGitHubActivity(now: Date())
+    }
+
+    private func refreshCachedGitHubVerificationState() {
+        guard isTodayGitHubVerified else {
+            return
+        }
+
+        githubVerificationState = .verified(includesToday: true)
     }
 
     private func verifyGitHubActivity(now verificationDate: Date) {
@@ -315,7 +330,7 @@ private struct DashboardHeader<ReminderDestination: View>: View {
                     .font(DesignTokens.Typography.title)
                     .foregroundStyle(DesignTokens.Color.primaryText)
 
-                Text("기술 기록을 꾸준히 쌓는 공간")
+                Text("GitHub 기록을 꾸준히 쌓는 공간")
                     .font(DesignTokens.Typography.subheadline)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
             }
@@ -479,38 +494,51 @@ private struct GitHubVerificationRow: View {
                         .font(.system(size: 10, weight: .medium))
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(state.tint)
-                        .symbolEffect(.rotate, options: .repeating, value: state == .checking)
+                        .verificationStatusSymbolEffect(isChecking: state == .checking)
                 }
             }
 
             Spacer()
 
-            Button {
-                isHelpPresented = true
-            } label: {
-                Image(systemName: "questionmark.circle")
-                    .font(.system(size: 15, weight: .medium))
-                    .frame(width: 30, height: 34)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(DesignTokens.Color.textSecondary)
-            .accessibilityLabel("GitHub 기록 확인 도움말")
-            .sheet(isPresented: $isHelpPresented) {
-                NavigationStack {
-                    GitHubVerificationHelpView()
+            HStack(spacing: 4) {
+                Button(action: refreshAction) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(width: 30, height: 34)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(DesignTokens.Color.accent)
+                .contentShape(Rectangle())
+                .scaleEffect(state == .checking ? 0.96 : 1)
+                .disabled(state == .checking)
+
+                Button {
+                    isHelpPresented = true
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                        .font(.system(size: 15, weight: .medium))
+                        .frame(width: 30, height: 34)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(DesignTokens.Color.textSecondary)
+                .accessibilityLabel("GitHub 기록 확인 도움말")
+                .sheet(isPresented: $isHelpPresented) {
+                    NavigationStack {
+                        GitHubVerificationHelpView()
+                    }
                 }
             }
+        }
+    }
+}
 
-            Button(action: refreshAction) {
-                Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 30, height: 34)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(DesignTokens.Color.accent)
-            .contentShape(Rectangle())
-            .scaleEffect(state == .checking ? 0.96 : 1)
-            .disabled(state == .checking)
+private extension View {
+    @ViewBuilder
+    func verificationStatusSymbolEffect(isChecking: Bool) -> some View {
+        if #available(iOS 18.0, *) {
+            symbolEffect(.rotate, options: .repeating, value: isChecking)
+        } else {
+            self
         }
     }
 }

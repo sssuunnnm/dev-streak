@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct DateService {
+nonisolated struct DateService {
     var calendar: Calendar
 
     init(calendar: Calendar = .devStreakCurrent) {
@@ -143,11 +143,11 @@ struct DateService {
     }
 }
 
-extension Calendar {
+nonisolated extension Calendar {
     static var devStreakCurrent: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .autoupdatingCurrent
-        calendar.firstWeekday = 2
+        calendar.firstWeekday = 1
         return calendar
     }
 }

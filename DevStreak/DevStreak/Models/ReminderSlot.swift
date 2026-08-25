@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum ReminderSlot: String, CaseIterable, Identifiable, Codable {
+nonisolated enum ReminderSlot: String, CaseIterable, Identifiable, Codable {
     case morning
     case evening
     case night

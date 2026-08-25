@@ -19,8 +19,13 @@ struct GitHubVerificationAutoRefreshPolicy {
     func shouldRunAutomaticVerification(
         now: Date,
         lastAutomaticVerificationAt: Date?,
-        isTaskRunning: Bool
+        isTaskRunning: Bool,
+        isTodayAlreadyGitHubVerified: Bool = false
     ) -> Bool {
+        guard !isTodayAlreadyGitHubVerified else {
+            return false
+        }
+
         guard !isTaskRunning else {
             return false
         }

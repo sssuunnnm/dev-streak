@@ -14,7 +14,7 @@ struct CalendarMonthView: View {
     private let dateService = DateService()
     private let calendarService = HabitCalendarService()
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
-    private let weekdaySymbols = ["월", "화", "수", "목", "금", "토", "일"]
+    private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
     private let dayCellHeight: CGFloat = 34
 
     private var monthDays: [HabitCalendarDay] {

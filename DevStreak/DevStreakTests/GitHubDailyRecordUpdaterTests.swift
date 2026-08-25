@@ -89,7 +89,7 @@ struct GitHubDailyRecordUpdaterTests {
         case .success:
             Issue.record("Expected failure")
         case .failure:
-            #expect(true)
+            break
         }
     }
 

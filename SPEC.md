@@ -97,7 +97,7 @@ Bundle identifiers:
 
 App Group:
 
-- `group.com.sssuunnnm.DevStreak`
+- `group.com.sssuunnnm.DevStreak.shared`
 
 ## 4. Main User Flow
 

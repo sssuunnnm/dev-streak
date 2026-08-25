@@ -62,11 +62,11 @@
 		C0DE00000000000000000003 /* DevStreakWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevStreakWidget.swift; sourceTree = "<group>"; };
 		C0DE00000000000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C0DE00000000000000000005 /* DevStreakWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DevStreakWidget.entitlements; sourceTree = "<group>"; };
-		C0DE00000000000000000026 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		C0DE0000000000000000001D /* WidgetConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetConstants.swift; sourceTree = "<group>"; };
 		C0DE0000000000000000001E /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
 		C0DE0000000000000000001F /* WidgetSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotStore.swift; sourceTree = "<group>"; };
 		C0DE00000000000000000020 /* WidgetDisplayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDisplayState.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000026 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -530,7 +530,7 @@
 				CODE_SIGN_ENTITLEMENTS = DevStreak/DevStreak.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = TAZDK2Q55U;
+				DEVELOPMENT_TEAM = XY59NZR96J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Config/DevStreakInfo.plist;
@@ -564,7 +564,7 @@
 				CODE_SIGN_ENTITLEMENTS = DevStreak/DevStreak.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = TAZDK2Q55U;
+				DEVELOPMENT_TEAM = XY59NZR96J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Config/DevStreakInfo.plist;
@@ -681,7 +681,7 @@
 				CODE_SIGN_ENTITLEMENTS = DevStreakWidget/DevStreakWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = TAZDK2Q55U;
+				DEVELOPMENT_TEAM = XY59NZR96J;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DevStreakWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -710,7 +710,7 @@
 				CODE_SIGN_ENTITLEMENTS = DevStreakWidget/DevStreakWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = TAZDK2Q55U;
+				DEVELOPMENT_TEAM = XY59NZR96J;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DevStreakWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

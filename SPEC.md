@@ -292,12 +292,13 @@ Permission rules:
 - Settings 화면에 notification authorization 상태를 명확히 표시한다.
 - `notDetermined` 상태에서는 "알림 허용하기" action을 제공한다.
 - 사용자가 해당 action을 명시적으로 눌렀을 때 requestAuthorization을 실행한다.
+- 알림 권한이 허용되기 전에는 reminder preference 토글과 시간 설정에 접근할 수 없다.
 - permission이 denied된 경우 crash하거나 반복 요청하지 않는다.
 - denied 상태에서는 알림이 시스템 설정에서 비활성화되어 있음을 명확히 표시한다.
 - denied 상태에서는 가능한 경우 iOS Settings로 이동할 수 있는 action을 제공한다.
 - authorized / provisional / ephemeral 상태에서는 현재 reminder preferences를 기준으로 notification을 예약한다.
 - reminder preference enabled 값과 notification authorization 상태는 독립적으로 유지한다.
-- permission이 없어도 reminder preference 변경은 저장할 수 있지만 실제 notification은 예약하지 않는다.
+- permission이 없으면 기존 reminder preference 값은 유지하지만 새 변경은 받지 않는다.
 
 Scheduling rules:
 

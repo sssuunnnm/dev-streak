@@ -112,7 +112,7 @@ Reminder는 UserNotifications 기반 local notification으로 동작합니다.
 - 저녁 18:00
 - 밤 22:00
 
-각 slot은 개별 enable/disable과 시간 변경을 지원합니다. 변경된 설정은 사용자가 `변경사항 적용`을 확인한 뒤 `ReminderSettingsStore`를 통해 UserDefaults에 저장됩니다.
+알림 권한을 허용한 뒤 각 slot의 enable/disable과 시각을 변경할 수 있습니다. 변경된 설정은 사용자가 `적용`을 확인한 뒤 `ReminderSettingsStore`를 통해 UserDefaults에 저장됩니다.
 
 Scheduling 정책:
 
@@ -122,7 +122,7 @@ Scheduling 정책:
 - 오늘 완료 상태면 오늘 reminder는 예약하지 않음
 - 미래 날짜 reminder는 유지
 - 오늘 완료 시 오늘 날짜의 pending reminder만 취소
-- notification permission과 reminder preference는 독립적으로 관리
+- notification permission이 허용되기 전에는 reminder preference를 수정하지 않음
 
 Race condition 방지를 위해 scheduling generation을 사용합니다. 오래된 sync 작업이 최신 cancel/sync 결과를 덮어쓰지 못하도록 `ReminderScheduleState`에서 최신 generation만 request를 추가할 수 있게 관리합니다.
 

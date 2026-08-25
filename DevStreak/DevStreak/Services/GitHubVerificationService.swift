@@ -342,22 +342,23 @@ struct GitHubBackfillService {
         widgetSnapshotService: WidgetSnapshotService? = nil,
         reminderNotificationService: ReminderNotificationService? = nil
     ) {
+        let resolvedDateService = dateService ?? DateService()
         let verificationService = verificationService ?? GitHubVerificationService(
+            dateService: resolvedDateService,
             lookbackDays: GitHubVerificationDefaults.backfillLookbackDays,
             budgetPolicy: GitHubVerificationBudgetPolicy(
                 authenticatedRequestLimit: GitHubVerificationDefaults.authenticatedBackfillRequestLimit
             )
         )
-        let dateService = dateService ?? DateService()
         let dailyRecordUpdater = dailyRecordUpdater ?? GitHubDailyRecordUpdater()
-        let widgetSnapshotService = widgetSnapshotService ?? WidgetSnapshotService()
-        let reminderNotificationService = reminderNotificationService ?? ReminderNotificationService()
+        let widgetSnapshotService = widgetSnapshotService ?? WidgetSnapshotService(dateService: resolvedDateService)
+        let reminderNotificationService = reminderNotificationService ?? ReminderNotificationService(dateService: resolvedDateService)
 
         self.init(
             verify: { now in
                 await verificationService.verify(now: now)
             },
-            dateService: dateService,
+            dateService: resolvedDateService,
             dailyRecordUpdater: dailyRecordUpdater,
             updateWidgetSnapshot: { records, ideas, now in
                 widgetSnapshotService.updateSnapshot(records: records, ideas: ideas, now: now)

@@ -81,39 +81,33 @@ private struct DevStreakSmallWidgetView: View {
     let entry: DevStreakWidgetEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("DevStreak")
                     .font(WidgetTypography.captionStrong)
+                    .foregroundStyle(WidgetPalette.primaryText)
+
+                Text("연속 기록")
+                    .font(WidgetTypography.captionStrong)
                     .foregroundStyle(WidgetPalette.secondaryText)
-
-                Spacer()
-
-                Image(systemName: entry.displayState.isTodayCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.caption.weight(.medium))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(entry.displayState.isTodayCompleted ? WidgetPalette.accent : WidgetPalette.secondaryText)
+                    .lineLimit(1)
             }
 
-            Text(entry.displayState.goalText)
-                .font(WidgetTypography.metric)
-                .foregroundStyle(WidgetPalette.primaryText)
-                .monospacedDigit()
-                .minimumScaleFactor(0.76)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text("\(entry.displayState.currentStreak)")
+                    .font(WidgetTypography.mediumMetric)
+                    .foregroundStyle(WidgetPalette.primaryText)
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.72)
 
-            WidgetStreakRow(streak: entry.displayState.currentStreak)
+                Text("일")
+                    .font(WidgetTypography.captionStrong)
+                    .foregroundStyle(WidgetPalette.primaryText)
+            }
 
             Spacer(minLength: 0)
 
-            HStack(spacing: 4) {
-                Image(systemName: "lightbulb")
-                    .font(.caption2.weight(.semibold))
-
-                Text(entry.displayState.pendingIdeaCount > 0 ? "메모 \(entry.displayState.pendingIdeaCount)개 대기 중" : "대기 중인 메모 없음")
-                    .font(WidgetTypography.caption)
-                    .lineLimit(1)
-            }
-            .foregroundStyle(WidgetPalette.secondaryText)
+            WidgetRecentDaysStrip(days: entry.displayState.recentDays, style: .compact)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
@@ -145,14 +139,42 @@ private struct DevStreakMediumWidgetView: View {
                     .minimumScaleFactor(0.72)
             }
 
-            WidgetRecentDaysStrip(days: entry.displayState.recentDays)
+            WidgetRecentDaysStrip(days: entry.displayState.recentDays, style: .regular)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
 
+private enum WidgetRecentDaysStripStyle {
+    case regular
+    case compact
+
+    var showsDayNumbers: Bool {
+        self == .regular
+    }
+
+    var markerSize: CGSize {
+        switch self {
+        case .regular:
+            CGSize(width: 18, height: 13)
+        case .compact:
+            CGSize(width: 13, height: 10)
+        }
+    }
+
+    var lineOffset: CGFloat {
+        switch self {
+        case .regular:
+            -5.5
+        case .compact:
+            -4.0
+        }
+    }
+}
+
 private struct WidgetRecentDaysStrip: View {
     let days: [WidgetRecentDay]
+    let style: WidgetRecentDaysStripStyle
 
     private var displayDays: [WidgetRecentDay] {
         days.isEmpty ? WidgetRecentDay.previewWeek : days
@@ -163,20 +185,22 @@ private struct WidgetRecentDaysStrip: View {
             Rectangle()
                 .fill(WidgetPalette.track)
                 .frame(height: 2)
-                .padding(.horizontal, 8)
-                .offset(y: -5.5)
+                .padding(.horizontal, style.markerSize.width / 2)
+                .offset(y: style.lineOffset)
 
             HStack(alignment: .bottom, spacing: 0) {
                 ForEach(displayDays) { day in
                     VStack(spacing: 6) {
-                        Text("\(day.dayNumber)")
-                            .font(WidgetTypography.caption)
-                            .foregroundStyle(day.isToday ? WidgetPalette.primaryText : WidgetPalette.mutedText)
-                            .monospacedDigit()
+                        if style.showsDayNumbers {
+                            Text("\(day.dayNumber)")
+                                .font(WidgetTypography.caption)
+                                .foregroundStyle(day.isToday ? WidgetPalette.primaryText : WidgetPalette.mutedText)
+                                .monospacedDigit()
+                        }
 
                         RoundedRectangle(cornerRadius: 8)
                             .fill(day.isCompleted ? WidgetPalette.accent : WidgetPalette.track)
-                            .frame(width: 18, height: 13)
+                            .frame(width: style.markerSize.width, height: style.markerSize.height)
                             .overlay {
                                 if day.isToday && !day.isCompleted {
                                     RoundedRectangle(cornerRadius: 8)

@@ -52,24 +52,55 @@ struct DevStreakWidgetProvider: TimelineProvider {
     }
 }
 
-struct DevStreakWidgetEntryView: View {
+private enum DevStreakWidgetMode {
+    case streak
+    case today
+}
+
+private struct DevStreakWidgetEntryView: View {
     @Environment(\.widgetFamily) private var widgetFamily
 
     let entry: DevStreakWidgetEntry
+    let mode: DevStreakWidgetMode
 
     var body: some View {
         Group {
             switch widgetFamily {
             case .systemMedium:
-                DevStreakMediumWidgetView(entry: entry)
+                switch mode {
+                case .streak:
+                    DevStreakMediumWidgetView(entry: entry)
+                case .today:
+                    DevStreakTodayMediumWidgetView(entry: entry)
+                }
             case .accessoryCircular:
-                DevStreakAccessoryCircularView(entry: entry)
+                switch mode {
+                case .streak:
+                    DevStreakAccessoryCircularView(entry: entry)
+                case .today:
+                    DevStreakTodayAccessoryCircularView(entry: entry)
+                }
             case .accessoryRectangular:
-                DevStreakAccessoryRectangularView(entry: entry)
+                switch mode {
+                case .streak:
+                    DevStreakAccessoryRectangularView(entry: entry)
+                case .today:
+                    DevStreakTodayAccessoryRectangularView(entry: entry)
+                }
             case .accessoryInline:
-                DevStreakAccessoryInlineView(entry: entry)
+                switch mode {
+                case .streak:
+                    DevStreakAccessoryInlineView(entry: entry)
+                case .today:
+                    DevStreakTodayAccessoryInlineView(entry: entry)
+                }
             default:
-                DevStreakSmallWidgetView(entry: entry)
+                switch mode {
+                case .streak:
+                    DevStreakSmallWidgetView(entry: entry)
+                case .today:
+                    DevStreakTodaySmallWidgetView(entry: entry)
+                }
             }
         }
         .containerBackground(.background, for: .widget)
@@ -107,7 +138,44 @@ private struct DevStreakSmallWidgetView: View {
 
             Spacer(minLength: 0)
 
-            WidgetRecentDaysStrip(days: entry.displayState.recentDays, style: .compact)
+            WidgetIdeaMemoCountView(count: entry.displayState.pendingIdeaCount)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+private struct DevStreakTodaySmallWidgetView: View {
+    let entry: DevStreakWidgetEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("DevStreak")
+                    .font(WidgetTypography.captionStrong)
+                    .foregroundStyle(WidgetPalette.primaryText)
+
+                Text("오늘 기록")
+                    .font(WidgetTypography.captionStrong)
+                    .foregroundStyle(WidgetPalette.secondaryText)
+                    .lineLimit(1)
+            }
+
+            HStack(alignment: .center, spacing: 8) {
+                Text(entry.displayState.goalText)
+                    .font(WidgetTypography.mediumMetric)
+                    .foregroundStyle(WidgetPalette.primaryText)
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.68)
+
+                Image(systemName: entry.displayState.isTodayCompleted ? "checkmark.circle.fill" : "circle")
+                    .font(.title2.weight(.semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(entry.displayState.isTodayCompleted ? WidgetPalette.accent : WidgetPalette.secondaryText)
+            }
+
+            Spacer(minLength: 0)
+
+            WidgetIdeaMemoCountView(count: entry.displayState.pendingIdeaCount)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
@@ -142,6 +210,63 @@ private struct DevStreakMediumWidgetView: View {
             WidgetRecentDaysStrip(days: entry.displayState.recentDays, style: .regular)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+private struct DevStreakTodayMediumWidgetView: View {
+    let entry: DevStreakWidgetEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("DevStreak")
+                        .font(WidgetTypography.captionStrong)
+                        .foregroundStyle(WidgetPalette.primaryText)
+
+                    Text("오늘 기록")
+                        .font(WidgetTypography.captionStrong)
+                        .foregroundStyle(WidgetPalette.secondaryText)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(entry.displayState.goalText)
+                        .font(WidgetTypography.mediumMetric)
+                        .foregroundStyle(WidgetPalette.primaryText)
+                        .monospacedDigit()
+                        .minimumScaleFactor(0.72)
+
+                    Image(systemName: entry.displayState.isTodayCompleted ? "checkmark.circle.fill" : "circle")
+                        .font(.title3.weight(.semibold))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(entry.displayState.isTodayCompleted ? WidgetPalette.accent : WidgetPalette.secondaryText)
+                }
+            }
+
+            WidgetRecentDaysStrip(days: entry.displayState.recentDays, style: .regular)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+private struct WidgetIdeaMemoCountView: View {
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "lightbulb")
+                .font(.caption.weight(.medium))
+                .symbolRenderingMode(.hierarchical)
+
+            Text("아이디어 메모 \(count)개")
+                .font(WidgetTypography.captionStrong)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+        }
+        .foregroundStyle(WidgetPalette.secondaryText)
     }
 }
 
@@ -215,24 +340,6 @@ private struct WidgetRecentDaysStrip: View {
     }
 }
 
-private struct WidgetStreakRow: View {
-    let streak: Int
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "flame.fill")
-                .font(.caption.weight(.medium))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(WidgetPalette.streak)
-
-            Text("\(streak)일")
-                .font(WidgetTypography.captionStrong)
-                .monospacedDigit()
-                .foregroundStyle(WidgetPalette.secondaryText)
-        }
-    }
-}
-
 private struct DevStreakAccessoryCircularView: View {
     let entry: DevStreakWidgetEntry
 
@@ -261,6 +368,31 @@ private struct DevStreakAccessoryCircularView: View {
     }
 }
 
+private struct DevStreakTodayAccessoryCircularView: View {
+    let entry: DevStreakWidgetEntry
+
+    var body: some View {
+        Gauge(value: entry.displayState.isTodayCompleted ? 1.0 : 0.0, in: 0.0...1.0) {
+            Text("오늘 기록")
+        } currentValueLabel: {
+            VStack(spacing: 1) {
+                Image(systemName: entry.displayState.isTodayCompleted ? "checkmark" : "circle")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+
+                Text("오늘")
+                    .font(.system(size: 8, weight: .semibold, design: .rounded))
+                    .minimumScaleFactor(0.8)
+            }
+            .widgetAccentable()
+        } minimumValueLabel: {
+            Text("")
+        } maximumValueLabel: {
+            Text("")
+        }
+        .gaugeStyle(.accessoryCircularCapacity)
+    }
+}
+
 private struct DevStreakAccessoryRectangularView: View {
     let entry: DevStreakWidgetEntry
 
@@ -281,11 +413,39 @@ private struct DevStreakAccessoryRectangularView: View {
     }
 }
 
+private struct DevStreakTodayAccessoryRectangularView: View {
+    let entry: DevStreakWidgetEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("DevStreak")
+                .font(.caption.weight(.semibold))
+
+            Text("오늘 \(entry.displayState.goalText)")
+                .font(.headline.weight(.semibold))
+                .monospacedDigit()
+
+            Text(entry.displayState.isTodayCompleted ? "작성 완료" : "작성 필요")
+                .font(.caption2)
+        }
+        .widgetAccentable()
+    }
+}
+
 private struct DevStreakAccessoryInlineView: View {
     let entry: DevStreakWidgetEntry
 
     var body: some View {
         Text("DevStreak · \(entry.displayState.goalText) · \(entry.displayState.currentStreak)일")
+            .widgetAccentable()
+    }
+}
+
+private struct DevStreakTodayAccessoryInlineView: View {
+    let entry: DevStreakWidgetEntry
+
+    var body: some View {
+        Text("DevStreak · 오늘 \(entry.displayState.goalText)")
             .widgetAccentable()
     }
 }
@@ -307,14 +467,27 @@ private enum WidgetTypography {
 }
 
 struct DevStreakWidget: Widget {
-    let kind = WidgetConstants.widgetKind
+    let kind = WidgetConstants.streakWidgetKind
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: DevStreakWidgetProvider()) { entry in
-            DevStreakWidgetEntryView(entry: entry)
+            DevStreakWidgetEntryView(entry: entry, mode: .streak)
         }
-        .configurationDisplayName("DevStreak")
-        .description("오늘 기록 상태를 보여줍니다.")
+        .configurationDisplayName("DevStreak 연속 기록")
+        .description("연속 기록과 최근 기록 흐름을 보여줍니다.")
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular, .accessoryInline])
+    }
+}
+
+struct DevStreakTodayWidget: Widget {
+    let kind = WidgetConstants.todayWidgetKind
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: DevStreakWidgetProvider()) { entry in
+            DevStreakWidgetEntryView(entry: entry, mode: .today)
+        }
+        .configurationDisplayName("DevStreak 오늘 기록")
+        .description("오늘 기록 달성 여부를 보여줍니다.")
         .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
@@ -323,6 +496,7 @@ struct DevStreakWidget: Widget {
 struct DevStreakWidgetBundle: WidgetBundle {
     var body: some Widget {
         DevStreakWidget()
+        DevStreakTodayWidget()
     }
 }
 
@@ -377,6 +551,12 @@ private extension WidgetRecentDay {
     DevStreakWidgetEntry.preview
 }
 
+#Preview("Small Today", as: .systemSmall) {
+    DevStreakTodayWidget()
+} timeline: {
+    DevStreakWidgetEntry.preview
+}
+
 #Preview("Medium", as: .systemMedium) {
     DevStreakWidget()
 } timeline: {
@@ -385,6 +565,12 @@ private extension WidgetRecentDay {
 
 #Preview("Circular", as: .accessoryCircular) {
     DevStreakWidget()
+} timeline: {
+    DevStreakWidgetEntry.preview
+}
+
+#Preview("Circular Today", as: .accessoryCircular) {
+    DevStreakTodayWidget()
 } timeline: {
     DevStreakWidgetEntry.preview
 }

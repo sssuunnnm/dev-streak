@@ -9,6 +9,7 @@ import Foundation
 
 enum WidgetConstants {
     static let appGroupIdentifier = "group.com.sssuunnnm.DevStreakApp"
-    static let widgetKind = "DevStreakWidget"
+    static let streakWidgetKind = "DevStreakWidget"
+    static let todayWidgetKind = "DevStreakTodayWidget"
     static let dashboardURL = URL(string: "devstreak://dashboard")!
 }

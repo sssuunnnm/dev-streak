@@ -43,7 +43,8 @@ struct WidgetSnapshotService {
         let didSave = store.save(snapshot)
 
         if didSave {
-            WidgetCenter.shared.reloadTimelines(ofKind: WidgetConstants.widgetKind)
+            WidgetCenter.shared.reloadTimelines(ofKind: WidgetConstants.streakWidgetKind)
+            WidgetCenter.shared.reloadTimelines(ofKind: WidgetConstants.todayWidgetKind)
         }
 
         return didSave

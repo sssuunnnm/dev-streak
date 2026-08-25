@@ -282,7 +282,7 @@ Reminder는 UserNotifications 기반 local notification으로 동작한다.
 
 - 개별 enable / disable 가능
 - 사용자가 시간 변경 가능
-- 시간 또는 enable 상태 변경 후 사용자가 확인 action을 눌렀을 때 저장 및 scheduling 적용
+- 시간 또는 enable 상태 변경 후 사용자가 적용 action을 눌렀을 때 저장 및 scheduling 적용
 - local notification으로 동작
 - 서버나 backend를 사용하지 않음
 
@@ -313,7 +313,7 @@ Scheduling rules:
 - 오늘 goal을 완료하면 오늘 날짜 identifier만 취소한다.
 - 미래 날짜 notification은 취소하지 않는다.
 - 중복 notification request를 만들지 않는다.
-- 사용자가 변경사항 적용을 확인하면 DevStreak가 관리하는 pending reminder를 정리하고 새 설정 기준으로 14일 rolling horizon을 다시 채운다.
+- 사용자가 변경사항을 적용하면 DevStreak가 관리하는 pending reminder를 정리하고 새 설정 기준으로 14일 rolling horizon을 다시 채운다.
 - 앱 실행/활성화 시 필요한 경우 현재 설정 기준으로 14일 rolling schedule을 동기화한다.
 - 사용자가 다음 날 앱을 실행하지 않아도 이미 예약된 notification이 정상적으로 동작해야 한다.
 
@@ -418,6 +418,8 @@ Widget 표시 정보:
 
 - Today `0 / 1` 또는 `1 / 1`
 - Current streak
+- Home Screen medium widget은 최근 7일 완료 상태와 current streak를 표시한다.
+- Lock Screen accessory circular widget은 current streak를 중심으로 표시한다.
 - Write shortcut / dashboard deep link
 - 지원 family에 따라 pending idea count 등 최소 snapshot 정보
 
@@ -431,6 +433,7 @@ Widget이 main app의 SwiftData store 전체를 직접 읽지 않는다.
 - `isTodayCompleted`
 - `currentStreak`
 - `pendingIdeaCount`
+- `recentDays`
 - `updatedAt`
 
 Widget snapshot은 Codable local data로 저장한다.

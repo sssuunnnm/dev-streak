@@ -187,6 +187,8 @@ Widget은 WidgetKit 기반으로 구현되어 있습니다.
 - `accessoryRectangular`
 - `accessoryInline`
 
+Home Screen medium widget은 현재 연속 기록과 최근 7일 완료 상태를 표시합니다. Lock Screen accessory circular widget은 연속 기록을 중심으로 표시합니다.
+
 Widget은 SwiftData store를 직접 열지 않습니다. App target이 현재 상태를 `WidgetSnapshot`으로 만들어 App Group UserDefaults에 저장하고, Widget target은 이 snapshot만 읽습니다.
 
 공유 App Group:
@@ -203,6 +205,7 @@ struct WidgetSnapshot: Codable, Equatable {
     var isTodayCompleted: Bool
     var currentStreak: Int
     var pendingIdeaCount: Int
+    var recentDays: [WidgetRecentDay]
     var updatedAt: Date
 }
 ```

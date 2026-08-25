@@ -12,6 +12,7 @@ struct WidgetDisplayState: Equatable {
     var isTodayCompleted: Bool
     var currentStreak: Int
     var pendingIdeaCount: Int
+    var recentDays: [WidgetRecentDay]
     var updatedAt: Date
 
     var goalText: String {
@@ -25,6 +26,7 @@ struct WidgetDisplayState: Equatable {
                 isTodayCompleted: false,
                 currentStreak: 0,
                 pendingIdeaCount: 0,
+                recentDays: [],
                 updatedAt: snapshot.updatedAt
             )
         }
@@ -34,6 +36,7 @@ struct WidgetDisplayState: Equatable {
             isTodayCompleted: snapshot.isTodayCompleted,
             currentStreak: snapshot.currentStreak,
             pendingIdeaCount: snapshot.pendingIdeaCount,
+            recentDays: snapshot.recentDays,
             updatedAt: snapshot.updatedAt
         )
     }

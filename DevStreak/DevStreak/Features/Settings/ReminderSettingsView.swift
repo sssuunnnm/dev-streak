@@ -17,7 +17,6 @@ struct ReminderSettingsView: View {
     @State private var settings = ReminderSettings.default
     @State private var savedSettings = ReminderSettings.default
     @State private var authorizationStatus = ReminderAuthorizationStatus.notDetermined
-    @State private var isApplyConfirmationPresented = false
 
     private var hasPendingChanges: Bool {
         settings != savedSettings
@@ -45,9 +44,7 @@ struct ReminderSettingsView: View {
             Section {
                 if hasPendingChanges {
                     ReminderPendingChangesRow(
-                        applyChanges: {
-                            isApplyConfirmationPresented = true
-                        },
+                        applyChanges: applyPendingChanges,
                         discardChanges: {
                             settings = savedSettings
                         }
@@ -72,19 +69,6 @@ struct ReminderSettingsView: View {
             savedSettings = loadedSettings
             await refreshAuthorizationStatus()
             await syncSchedule()
-        }
-        .confirmationDialog(
-            "알림 설정을 적용할까요?",
-            isPresented: $isApplyConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button("적용") {
-                applyPendingChanges()
-            }
-
-            Button("취소", role: .cancel) {}
-        } message: {
-            Text("변경된 시간과 토글 상태로 앞으로의 알림을 다시 설정합니다.")
         }
     }
 
@@ -288,28 +272,27 @@ private struct ReminderPreferenceRow: View {
     @Binding var selectedDate: Date
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Image(systemName: slot.iconName)
-                    .font(.system(size: 16, weight: .medium))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(slot.tint)
-                    .frame(width: 22)
+        HStack(spacing: 10) {
+            Image(systemName: slot.iconName)
+                .font(.system(size: 16, weight: .medium))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(slot.tint)
+                .frame(width: 22)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(slot.title)
-                        .font(DesignTokens.Typography.headline)
-                        .foregroundStyle(DesignTokens.Color.primaryText)
-                }
+            Text(slot.title)
+                .font(DesignTokens.Typography.headline)
+                .foregroundStyle(DesignTokens.Color.primaryText)
 
-                Spacer()
-
-                Toggle(slot.title, isOn: $isEnabled)
-                    .labelsHidden()
-            }
-
-            DatePicker("시각", selection: $selectedDate, displayedComponents: .hourAndMinute)
+            DatePicker("", selection: $selectedDate, displayedComponents: .hourAndMinute)
+                .labelsHidden()
                 .disabled(!isEnabled)
+                .frame(width: 104, alignment: .leading)
+                .accessibilityLabel("\(slot.title) 시간")
+
+            Spacer(minLength: 8)
+
+            Toggle(slot.title, isOn: $isEnabled)
+                .labelsHidden()
         }
         .padding(.vertical, 6)
         .font(DesignTokens.Typography.body)

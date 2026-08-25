@@ -40,6 +40,30 @@ struct WidgetSnapshotStoreTests {
         #expect(store.load(fallbackDateKey: "2026-08-22") == .fallback(dateKey: "2026-08-22"))
     }
 
+    @Test func legacySnapshotWithoutRecentDaysStillLoads() throws {
+        let defaults = Self.defaults()
+        let store = WidgetSnapshotStore(defaults: defaults)
+        let legacyData = Data("""
+        {
+          "dateKey": "2026-08-22",
+          "isTodayCompleted": true,
+          "currentStreak": 7,
+          "pendingIdeaCount": 2,
+          "updatedAt": 809913600
+        }
+        """.utf8)
+
+        defaults.set(legacyData, forKey: "devstreak.widget.snapshot")
+
+        let snapshot = store.load(fallbackDateKey: "2026-08-22")
+
+        #expect(snapshot.dateKey == "2026-08-22")
+        #expect(snapshot.isTodayCompleted)
+        #expect(snapshot.currentStreak == 7)
+        #expect(snapshot.pendingIdeaCount == 2)
+        #expect(snapshot.recentDays.isEmpty)
+    }
+
     private static func defaults() -> UserDefaults {
         let suiteName = "WidgetSnapshotStoreTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

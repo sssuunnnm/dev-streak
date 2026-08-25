@@ -187,7 +187,7 @@ Widget은 WidgetKit 기반으로 구현되어 있습니다.
 - `accessoryRectangular`
 - `accessoryInline`
 
-Home Screen widget은 연속 기록 중심 위젯과 오늘 기록 중심 위젯을 제공합니다. Small 연속 기록 위젯은 현재 연속 기록과 아이디어 메모 개수를 표시하고, medium 위젯은 최근 7일 완료 상태를 함께 표시합니다. Lock Screen accessory circular widget도 연속 기록 중심과 오늘 기록 중심 두 버전을 제공합니다.
+Home Screen widget은 연속 기록 중심 위젯과 오늘 기록 중심 위젯을 제공합니다. Small 연속 기록 위젯은 현재 연속 기록과 아이디어 메모 개수를 표시하고, medium 위젯은 최근 7일 완료 상태를 함께 표시합니다. 오늘 기록 위젯은 small과 Lock Screen accessory circular에서 `O` 또는 `X`로 완료 여부를 표시합니다.
 
 Widget은 SwiftData store를 직접 열지 않습니다. App target이 현재 상태를 `WidgetSnapshot`으로 만들어 App Group UserDefaults에 저장하고, Widget target은 이 snapshot만 읽습니다.
 

@@ -67,12 +67,7 @@ private struct DevStreakWidgetEntryView: View {
         Group {
             switch widgetFamily {
             case .systemMedium:
-                switch mode {
-                case .streak:
-                    DevStreakMediumWidgetView(entry: entry)
-                case .today:
-                    DevStreakTodayMediumWidgetView(entry: entry)
-                }
+                DevStreakMediumWidgetView(entry: entry)
             case .accessoryCircular:
                 switch mode {
                 case .streak:
@@ -81,19 +76,9 @@ private struct DevStreakWidgetEntryView: View {
                     DevStreakTodayAccessoryCircularView(entry: entry)
                 }
             case .accessoryRectangular:
-                switch mode {
-                case .streak:
-                    DevStreakAccessoryRectangularView(entry: entry)
-                case .today:
-                    DevStreakTodayAccessoryRectangularView(entry: entry)
-                }
+                DevStreakAccessoryRectangularView(entry: entry)
             case .accessoryInline:
-                switch mode {
-                case .streak:
-                    DevStreakAccessoryInlineView(entry: entry)
-                case .today:
-                    DevStreakTodayAccessoryInlineView(entry: entry)
-                }
+                DevStreakAccessoryInlineView(entry: entry)
             default:
                 switch mode {
                 case .streak:
@@ -148,7 +133,7 @@ private struct DevStreakTodaySmallWidgetView: View {
     let entry: DevStreakWidgetEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("DevStreak")
                     .font(WidgetTypography.captionStrong)
@@ -160,18 +145,7 @@ private struct DevStreakTodaySmallWidgetView: View {
                     .lineLimit(1)
             }
 
-            HStack(alignment: .center, spacing: 8) {
-                Text(entry.displayState.goalText)
-                    .font(WidgetTypography.mediumMetric)
-                    .foregroundStyle(WidgetPalette.primaryText)
-                    .monospacedDigit()
-                    .minimumScaleFactor(0.68)
-
-                Image(systemName: entry.displayState.isTodayCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.title2.weight(.semibold))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(entry.displayState.isTodayCompleted ? WidgetPalette.accent : WidgetPalette.secondaryText)
-            }
+            WidgetTodayStatusMark(isCompleted: entry.displayState.isTodayCompleted, size: 70)
 
             Spacer(minLength: 0)
 
@@ -213,45 +187,6 @@ private struct DevStreakMediumWidgetView: View {
     }
 }
 
-private struct DevStreakTodayMediumWidgetView: View {
-    let entry: DevStreakWidgetEntry
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("DevStreak")
-                        .font(WidgetTypography.captionStrong)
-                        .foregroundStyle(WidgetPalette.primaryText)
-
-                    Text("오늘 기록")
-                        .font(WidgetTypography.captionStrong)
-                        .foregroundStyle(WidgetPalette.secondaryText)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: 0)
-
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(entry.displayState.goalText)
-                        .font(WidgetTypography.mediumMetric)
-                        .foregroundStyle(WidgetPalette.primaryText)
-                        .monospacedDigit()
-                        .minimumScaleFactor(0.72)
-
-                    Image(systemName: entry.displayState.isTodayCompleted ? "checkmark.circle.fill" : "circle")
-                        .font(.title3.weight(.semibold))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(entry.displayState.isTodayCompleted ? WidgetPalette.accent : WidgetPalette.secondaryText)
-                }
-            }
-
-            WidgetRecentDaysStrip(days: entry.displayState.recentDays, style: .regular)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-    }
-}
-
 private struct WidgetIdeaMemoCountView: View {
     let count: Int
 
@@ -267,6 +202,24 @@ private struct WidgetIdeaMemoCountView: View {
                 .minimumScaleFactor(0.82)
         }
         .foregroundStyle(WidgetPalette.secondaryText)
+    }
+}
+
+private struct WidgetTodayStatusMark: View {
+    let isCompleted: Bool
+    let size: CGFloat
+
+    private var text: String {
+        isCompleted ? "O" : "X"
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: size, weight: .bold, design: .rounded))
+            .foregroundStyle(isCompleted ? WidgetPalette.accent : WidgetPalette.secondaryText)
+            .minimumScaleFactor(0.75)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityLabel(isCompleted ? "오늘 기록 완료" : "오늘 기록 미완료")
     }
 }
 
@@ -375,14 +328,9 @@ private struct DevStreakTodayAccessoryCircularView: View {
         Gauge(value: entry.displayState.isTodayCompleted ? 1.0 : 0.0, in: 0.0...1.0) {
             Text("오늘 기록")
         } currentValueLabel: {
-            VStack(spacing: 1) {
-                Image(systemName: entry.displayState.isTodayCompleted ? "checkmark" : "circle")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-
-                Text("오늘")
-                    .font(.system(size: 8, weight: .semibold, design: .rounded))
-                    .minimumScaleFactor(0.8)
-            }
+            Text(entry.displayState.isTodayCompleted ? "O" : "X")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .minimumScaleFactor(0.8)
             .widgetAccentable()
         } minimumValueLabel: {
             Text("")
@@ -413,39 +361,11 @@ private struct DevStreakAccessoryRectangularView: View {
     }
 }
 
-private struct DevStreakTodayAccessoryRectangularView: View {
-    let entry: DevStreakWidgetEntry
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("DevStreak")
-                .font(.caption.weight(.semibold))
-
-            Text("오늘 \(entry.displayState.goalText)")
-                .font(.headline.weight(.semibold))
-                .monospacedDigit()
-
-            Text(entry.displayState.isTodayCompleted ? "작성 완료" : "작성 필요")
-                .font(.caption2)
-        }
-        .widgetAccentable()
-    }
-}
-
 private struct DevStreakAccessoryInlineView: View {
     let entry: DevStreakWidgetEntry
 
     var body: some View {
         Text("DevStreak · \(entry.displayState.goalText) · \(entry.displayState.currentStreak)일")
-            .widgetAccentable()
-    }
-}
-
-private struct DevStreakTodayAccessoryInlineView: View {
-    let entry: DevStreakWidgetEntry
-
-    var body: some View {
-        Text("DevStreak · 오늘 \(entry.displayState.goalText)")
             .widgetAccentable()
     }
 }
@@ -488,7 +408,7 @@ struct DevStreakTodayWidget: Widget {
         }
         .configurationDisplayName("DevStreak 오늘 기록")
         .description("오늘 기록 달성 여부를 보여줍니다.")
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular, .accessoryInline])
+        .supportedFamilies([.systemSmall, .accessoryCircular])
     }
 }
 

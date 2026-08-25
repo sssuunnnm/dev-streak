@@ -192,7 +192,7 @@ Widget은 SwiftData store를 직접 열지 않습니다. App target이 현재 �
 공유 App Group:
 
 ```text
-group.com.sssuunnnm.DevStreakApp.shared
+group.com.sssuunnnm.DevStreakApp
 ```
 
 Snapshot 구조:

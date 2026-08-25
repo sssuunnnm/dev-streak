@@ -331,7 +331,9 @@ private struct DevStreakTodayAccessoryCircularView: View {
             Text(entry.displayState.isTodayCompleted ? "O" : "X")
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .minimumScaleFactor(0.8)
-            .widgetAccentable()
+                .frame(height: 24, alignment: .center)
+                .offset(y: 2)
+                .widgetAccentable()
         } minimumValueLabel: {
             Text("")
         } maximumValueLabel: {

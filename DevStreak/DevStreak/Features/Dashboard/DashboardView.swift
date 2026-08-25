@@ -19,6 +19,7 @@ struct DashboardView: View {
     private let reminderSettingsStore = ReminderSettingsStore()
     private let reminderNotificationService = ReminderNotificationService()
     private let widgetSnapshotService = WidgetSnapshotService()
+    private let githubCredentialStore = GitHubCredentialStore()
     private let githubVerificationService = GitHubVerificationService()
     private let githubDailyRecordUpdater = GitHubDailyRecordUpdater()
     private let githubAutoRefreshPolicy = GitHubVerificationAutoRefreshPolicy()
@@ -28,6 +29,7 @@ struct DashboardView: View {
     @State private var githubVerificationTask: Task<Void, Never>?
     @State private var lastGitHubAutomaticVerificationAt: Date?
     @State private var manualCompletionConfirmation = ManualCompletionConfirmationState()
+    @State private var isGitHubConnectionSettingsPresented = false
 
     private var now: Date {
         Date()
@@ -75,7 +77,10 @@ struct DashboardView: View {
                         writeAction: {
                             manualCompletionConfirmation.request()
                         },
-                        refreshAction: verifyGitHubActivity
+                        refreshAction: verifyGitHubActivity,
+                        connectionAction: {
+                            isGitHubConnectionSettingsPresented = true
+                        }
                     )
 
                     NavigationLink {
@@ -100,6 +105,7 @@ struct DashboardView: View {
             .toolbar(.hidden, for: .navigationBar)
             .task {
                 refreshWidgetSnapshot()
+                refreshGitHubConnectionState()
                 refreshCachedGitHubVerificationState()
                 verifyGitHubActivityIfNeeded(now: Date())
                 await syncReminderSchedule()
@@ -110,6 +116,7 @@ struct DashboardView: View {
                 }
 
                 refreshWidgetSnapshot()
+                refreshGitHubConnectionState()
                 refreshCachedGitHubVerificationState()
                 verifyGitHubActivityIfNeeded(now: Date())
 
@@ -119,6 +126,17 @@ struct DashboardView: View {
             }
             .onOpenURL { url in
                 handleDeepLink(url)
+            }
+            .sheet(
+                isPresented: $isGitHubConnectionSettingsPresented,
+                onDismiss: {
+                    refreshGitHubConnectionState()
+                    verifyGitHubActivityIfNeeded(now: Date())
+                }
+            ) {
+                NavigationStack {
+                    GitHubConnectionSettingsView()
+                }
             }
             .alert("오늘 기록을 완료했나요?", isPresented: manualCompletionBinding) {
                 Button("완료로 표시") {
@@ -220,6 +238,11 @@ struct DashboardView: View {
     }
 
     private func verifyGitHubActivityIfNeeded(now: Date) {
+        guard hasSavedGitHubToken() else {
+            githubVerificationState = .needsConnection
+            return
+        }
+
         guard githubAutoRefreshPolicy.shouldRunAutomaticVerification(
             now: now,
             lastAutomaticVerificationAt: lastGitHubAutomaticVerificationAt,
@@ -234,6 +257,12 @@ struct DashboardView: View {
     }
 
     private func verifyGitHubActivity() {
+        guard hasSavedGitHubToken() else {
+            githubVerificationState = .needsConnection
+            isGitHubConnectionSettingsPresented = true
+            return
+        }
+
         verifyGitHubActivity(now: Date())
     }
 
@@ -243,6 +272,18 @@ struct DashboardView: View {
         }
 
         githubVerificationState = .verified(includesToday: true)
+    }
+
+    private func refreshGitHubConnectionState() {
+        guard !isTodayGitHubVerified else {
+            return
+        }
+
+        githubVerificationState = hasSavedGitHubToken() ? .idle : .needsConnection
+    }
+
+    private func hasSavedGitHubToken() -> Bool {
+        (try? githubCredentialStore.hasToken()) == true
     }
 
     private func verifyGitHubActivity(now verificationDate: Date) {
@@ -360,6 +401,7 @@ private struct PrimaryGoalCard: View {
     let verificationState: GitHubVerificationViewState
     let writeAction: () -> Void
     let refreshAction: () -> Void
+    let connectionAction: () -> Void
 
     init(
         dateKey: String,
@@ -369,7 +411,8 @@ private struct PrimaryGoalCard: View {
         completionSource: String,
         verificationState: GitHubVerificationViewState,
         writeAction: @escaping () -> Void,
-        refreshAction: @escaping () -> Void
+        refreshAction: @escaping () -> Void,
+        connectionAction: @escaping () -> Void
     ) {
         self.dateKey = dateKey
         self.isCompleted = isCompleted
@@ -379,6 +422,7 @@ private struct PrimaryGoalCard: View {
         self.verificationState = verificationState
         self.writeAction = writeAction
         self.refreshAction = refreshAction
+        self.connectionAction = connectionAction
     }
 
     var body: some View {
@@ -424,7 +468,8 @@ private struct PrimaryGoalCard: View {
             GitHubVerificationRow(
                 state: verificationState,
                 isTodayCompleted: isCompleted,
-                refreshAction: refreshAction
+                refreshAction: refreshAction,
+                connectionAction: connectionAction
             )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -469,17 +514,20 @@ private struct GitHubVerificationRow: View {
     let state: GitHubVerificationViewState
     let isTodayCompleted: Bool
     let refreshAction: () -> Void
+    let connectionAction: () -> Void
 
     @State private var isHelpPresented = false
 
     init(
         state: GitHubVerificationViewState,
         isTodayCompleted: Bool,
-        refreshAction: @escaping () -> Void
+        refreshAction: @escaping () -> Void,
+        connectionAction: @escaping () -> Void
     ) {
         self.state = state
         self.isTodayCompleted = isTodayCompleted
         self.refreshAction = refreshAction
+        self.connectionAction = connectionAction
     }
 
     var body: some View {
@@ -501,8 +549,8 @@ private struct GitHubVerificationRow: View {
             Spacer()
 
             HStack(spacing: 4) {
-                Button(action: refreshAction) {
-                    Image(systemName: "arrow.clockwise")
+                Button(action: state == .needsConnection ? connectionAction : refreshAction) {
+                    Image(systemName: state == .needsConnection ? "link.circle" : "arrow.clockwise")
                         .font(.system(size: 15, weight: .semibold))
                         .frame(width: 30, height: 34)
                 }
@@ -511,6 +559,7 @@ private struct GitHubVerificationRow: View {
                 .contentShape(Rectangle())
                 .scaleEffect(state == .checking ? 0.96 : 1)
                 .disabled(state == .checking)
+                .accessibilityLabel(state == .needsConnection ? "GitHub 연결 설정" : "GitHub 기록 새로고침")
 
                 Button {
                     isHelpPresented = true
@@ -588,6 +637,7 @@ private struct IdeaInboxSummaryCard: View {
 
 private enum GitHubVerificationViewState: Equatable {
     case idle
+    case needsConnection
     case checking
     case verified(includesToday: Bool)
     case noActivity
@@ -598,7 +648,7 @@ private enum GitHubVerificationViewState: Equatable {
         switch self {
         case .failure, .unableToCheck:
             return true
-        case .idle, .checking, .verified, .noActivity:
+        case .idle, .needsConnection, .checking, .verified, .noActivity:
             return false
         }
     }
@@ -607,6 +657,8 @@ private enum GitHubVerificationViewState: Equatable {
         switch self {
         case .idle, .noActivity:
             return nil
+        case .needsConnection:
+            return "link.circle"
         case .checking:
             return "arrow.triangle.2.circlepath"
         case .verified:
@@ -622,7 +674,7 @@ private enum GitHubVerificationViewState: Equatable {
             return DesignTokens.Color.success
         case .failure, .unableToCheck:
             return DesignTokens.Color.warning
-        case .checking:
+        case .needsConnection, .checking:
             return DesignTokens.Color.accent
         case .idle, .noActivity:
             return DesignTokens.Color.textSecondary
@@ -633,6 +685,8 @@ private enum GitHubVerificationViewState: Equatable {
         switch self {
         case .idle:
             return isTodayCompleted ? "오늘 기록 완료" : "GitHub 확인 준비됨"
+        case .needsConnection:
+            return "GitHub 연결이 필요합니다"
         case .checking:
             return "GitHub 기록 확인 중..."
         case .verified(let includesToday):

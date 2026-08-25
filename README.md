@@ -37,7 +37,7 @@ DevStreak는 다음 원칙을 기준으로 구현되어 있습니다.
 
 1. Dashboard에서 오늘 기록 상태와 streak를 확인합니다.
 2. 오늘 GitHub 기록을 남겼다면 `오늘 기록 완료`로 수동 완료 처리할 수 있습니다.
-3. DevStreak가 최근 GitHub 콘텐츠 활동을 read-only로 확인합니다. Public repository는 token 없이 확인할 수 있고, Fine-grained PAT는 안정적인 요청을 위한 선택 사항입니다.
+3. DevStreak가 저장된 Fine-grained PAT로 최근 GitHub 콘텐츠 활동을 read-only로 확인합니다.
 4. 글감은 `아이디어 메모`에 저장하고, 필요할 때 Claude prompt로 복사해 넘깁니다.
 5. Widget과 알림은 앱을 열지 않아도 오늘 기록 상태를 계속 상기시킵니다.
 
@@ -229,8 +229,8 @@ sssuunnnm/dev-archive
 
 인증:
 
-- Public unauthenticated API fallback
-- Fine-grained PAT 선택 지원
+- GitHub 연결 전에는 자동 확인을 실행하지 않음
+- Fine-grained PAT 기반 확인
 - Token은 Keychain에만 저장
 - Token이 있으면 `Authorization: Bearer <token>` 사용
 - GitHub write permission 없음

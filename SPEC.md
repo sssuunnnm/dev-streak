@@ -519,8 +519,8 @@ Persistence rules:
 
 Authentication and security rules:
 
-- 대상 repository는 public repository이므로 token 없이 public unauthenticated GitHub REST API로 확인할 수 있다.
-- Fine-grained PAT는 선택 사항이다.
+- Dashboard GitHub verification은 Fine-grained PAT가 Keychain에 저장된 뒤에만 실행한다.
+- GitHub 연결 전에는 Dashboard에 연결 필요 상태를 표시하고 자동 확인을 실행하지 않는다.
 - Token이 있으면 `Authorization: Bearer <token>` header를 사용한다.
 - Token은 Keychain에만 저장한다.
 - Token이 저장되어 있으면 GitHub 연결 설정 화면에서 token 입력칸은 숨기고 연결 테스트와 삭제 action만 제공한다.

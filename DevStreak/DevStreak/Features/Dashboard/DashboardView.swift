@@ -330,7 +330,7 @@ private struct DashboardHeader<ReminderDestination: View>: View {
                     .font(DesignTokens.Typography.title)
                     .foregroundStyle(DesignTokens.Color.primaryText)
 
-                Text("기술 기록을 꾸준히 쌓는 공간")
+                Text("GitHub 기록을 꾸준히 쌓는 공간")
                     .font(DesignTokens.Typography.subheadline)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
             }

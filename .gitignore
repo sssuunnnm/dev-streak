@@ -2,15 +2,33 @@
 xcuserdata/
 *.xcuserstate
 *.xcscmblueprint
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+.swiftpm/xcode/xcuserdata/
 
-# Xcode build products
+# Xcode build products and reports
 DerivedData/
 build/
+build-*/
+*.xcresult
+*.xcarchive
+*.dSYM
+*.dSYM.zip
+*.ipa
 *.moved-aside
 *.xccheckout
 
 # Swift Package Manager build artifacts
 .build/
+.swiftpm/configuration/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# App Store / export local files
+ExportOptions.plist
+*.mobileprovision
 
 # macOS metadata
 .DS_Store

@@ -60,5 +60,14 @@ struct GitHubVerificationAutoRefreshPolicyTests {
         ))
     }
 
+    @Test func cachedTodayGitHubVerificationPreventsAutomaticVerification() {
+        #expect(!policy.shouldRunAutomaticVerification(
+            now: Self.now.addingTimeInterval(60 * 60),
+            lastAutomaticVerificationAt: Self.now,
+            isTaskRunning: false,
+            isTodayAlreadyGitHubVerified: true
+        ))
+    }
+
     private static let now = Date(timeIntervalSince1970: 1_787_321_600)
 }

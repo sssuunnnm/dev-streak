@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct GitHubRateLimitDiagnostics: Equatable {
+nonisolated struct GitHubRateLimitDiagnostics: Equatable {
     let limit: Int?
     let remaining: Int?
     let resetAt: Date?
@@ -30,7 +30,7 @@ struct GitHubRateLimitDiagnostics: Equatable {
     }
 }
 
-enum GitHubAPIError: Error, Equatable {
+nonisolated enum GitHubAPIError: Error, Equatable {
     case rateLimited(GitHubRateLimitDiagnostics?)
     case credentialUnavailable
     case unauthorized
@@ -42,32 +42,32 @@ enum GitHubAPIError: Error, Equatable {
     case unexpectedStatus(Int)
 }
 
-struct GitHubCommitSummary: Equatable {
+nonisolated struct GitHubCommitSummary: Equatable {
     let sha: String
     let timestamp: Date
 }
 
-struct GitHubPullRequest: Equatable {
+nonisolated struct GitHubPullRequest: Equatable {
     let number: Int
 }
 
-struct GitHubCommitDetail: Equatable {
+nonisolated struct GitHubCommitDetail: Equatable {
     let sha: String
     let filenames: [String]
 }
 
-struct GitHubRepositorySummary: Equatable {
+nonisolated struct GitHubRepositorySummary: Equatable {
     let fullName: String
     let defaultBranch: String
     let isPrivate: Bool
 }
 
-struct GitHubPage<Value: Equatable>: Equatable {
+nonisolated struct GitHubPage<Value: Equatable>: Equatable {
     let values: [Value]
     let hasNextPage: Bool
 }
 
-protocol GitHubAPIClientProtocol {
+nonisolated protocol GitHubAPIClientProtocol {
     func repository(owner: String, repository: String) async throws -> GitHubRepositorySummary
     func commits(owner: String, repository: String, ref: String, since: Date?, perPage: Int, page: Int) async throws -> GitHubPage<GitHubCommitSummary>
     func openPullRequests(owner: String, repository: String, perPage: Int, page: Int) async throws -> GitHubPage<GitHubPullRequest>
@@ -75,7 +75,7 @@ protocol GitHubAPIClientProtocol {
     func commitDetail(owner: String, repository: String, sha: String) async throws -> GitHubCommitDetail
 }
 
-struct GitHubAPIClient: GitHubAPIClientProtocol {
+nonisolated struct GitHubAPIClient: GitHubAPIClientProtocol {
     private let baseURL: URL
     private let session: URLSession
     private let authorizationHeaderProvider: (() throws -> String?)?
@@ -249,7 +249,7 @@ struct GitHubAPIClient: GitHubAPIClientProtocol {
     }
 }
 
-private extension HTTPURLResponse {
+private nonisolated extension HTTPURLResponse {
     var isRateLimited: Bool {
         value(forHTTPHeaderField: "X-RateLimit-Remaining") == "0"
         || value(forHTTPHeaderField: "Retry-After") != nil
@@ -264,7 +264,7 @@ private extension HTTPURLResponse {
     }
 }
 
-private struct GitHubCommitSummaryDTO: Decodable, Equatable {
+private nonisolated struct GitHubCommitSummaryDTO: Decodable, Equatable {
     let sha: String
     let commit: CommitDTO
 
@@ -278,37 +278,37 @@ private struct GitHubCommitSummaryDTO: Decodable, Equatable {
         return GitHubCommitSummary(sha: sha, timestamp: timestamp)
     }
 
-    struct CommitDTO: Decodable, Equatable {
+    nonisolated struct CommitDTO: Decodable, Equatable {
         let author: TimestampDTO?
         let committer: TimestampDTO?
     }
 
-    struct TimestampDTO: Decodable, Equatable {
+    nonisolated struct TimestampDTO: Decodable, Equatable {
         let date: String
     }
 }
 
-private struct GitHubPullRequestDTO: Decodable, Equatable {
+private nonisolated struct GitHubPullRequestDTO: Decodable, Equatable {
     let number: Int
 }
 
-private struct GitHubRepositoryDTO: Decodable {
+private nonisolated struct GitHubRepositoryDTO: Decodable {
     let fullName: String
     let defaultBranch: String
     let isPrivate: Bool
 
-    enum CodingKeys: String, CodingKey {
+    nonisolated enum CodingKeys: String, CodingKey {
         case fullName = "full_name"
         case defaultBranch = "default_branch"
         case isPrivate = "private"
     }
 }
 
-private struct GitHubCommitDetailDTO: Decodable {
+private nonisolated struct GitHubCommitDetailDTO: Decodable {
     let sha: String
     let files: [FileDTO]
 
-    struct FileDTO: Decodable {
+    nonisolated struct FileDTO: Decodable {
         let filename: String
     }
 }

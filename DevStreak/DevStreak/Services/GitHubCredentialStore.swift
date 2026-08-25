@@ -8,17 +8,17 @@
 import Foundation
 import Security
 
-enum GitHubCredentialError: Error, Equatable {
+nonisolated enum GitHubCredentialError: Error, Equatable {
     case keychainFailure(OSStatus)
 }
 
-protocol GitHubTokenStoreProtocol {
+nonisolated protocol GitHubTokenStoreProtocol {
     func loadToken() throws -> String?
     func saveToken(_ token: String) throws
     func deleteToken() throws
 }
 
-struct GitHubCredentialStore {
+nonisolated struct GitHubCredentialStore {
     private let tokenStore: GitHubTokenStoreProtocol
 
     init(tokenStore: GitHubTokenStoreProtocol = KeychainGitHubTokenStore()) {
@@ -56,13 +56,13 @@ struct GitHubCredentialStore {
     }
 }
 
-struct KeychainGitHubTokenStore: GitHubTokenStoreProtocol {
+nonisolated struct KeychainGitHubTokenStore: GitHubTokenStoreProtocol {
     private let service: String
     private let account: String
 
     init(
         service: String = "com.sssuunnnm.DevStreak.github",
-        account: String = "dev-archive.pat"
+        account: String = GitHubRepositoryConfiguration.keychainAccount
     ) {
         self.service = service
         self.account = account

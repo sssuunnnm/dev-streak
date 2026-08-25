@@ -208,7 +208,6 @@ struct GitHubAPIClientTests {
             _ = try await client.openPullRequests(owner: "sssuunnnm", repository: "dev-archive", perPage: 20, page: 1)
             Issue.record("Expected secondary rate limit failure.")
         } catch GitHubAPIError.rateLimited(_) {
-            #expect(true)
         }
     }
 
@@ -225,7 +224,6 @@ struct GitHubAPIClientTests {
             _ = try await client.openPullRequests(owner: "sssuunnnm", repository: "dev-archive", perPage: 20, page: 1)
             Issue.record("Expected rate limit failure.")
         } catch GitHubAPIError.rateLimited(_) {
-            #expect(true)
         }
     }
 
@@ -242,7 +240,6 @@ struct GitHubAPIClientTests {
             _ = try await client.openPullRequests(owner: "sssuunnnm", repository: "dev-archive", perPage: 20, page: 1)
             Issue.record("Expected forbidden failure.")
         } catch GitHubAPIError.forbidden {
-            #expect(true)
         }
     }
 

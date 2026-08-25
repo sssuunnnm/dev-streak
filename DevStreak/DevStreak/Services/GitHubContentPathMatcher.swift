@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct GitHubContentPathMatcher {
+nonisolated struct GitHubContentPathMatcher {
     private let contentPrefixes = [
         "src/content/articles/",
         "src/content/projects/",

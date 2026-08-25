@@ -51,11 +51,11 @@ struct DateServiceTests {
         #expect(dateKeys.last == "2026-08-31")
     }
 
-    @Test func calculatesLeadingBlankDaysWithMondayFirstCalendar() {
+    @Test func calculatesLeadingBlankDaysWithSundayFirstCalendar() {
         let service = DateService(calendar: Self.calendar(timeZoneIdentifier: "Asia/Seoul"))
         let monthDate = Self.noon("2026-08-21", timeZoneIdentifier: "Asia/Seoul")
 
-        #expect(service.leadingBlankDayCount(containing: monthDate) == 5)
+        #expect(service.leadingBlankDayCount(containing: monthDate) == 6)
     }
 
     @Test func comparesDateKeysAtDayGranularity() {
@@ -70,7 +70,7 @@ struct DateServiceTests {
     private static func calendar(timeZoneIdentifier: String) -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: timeZoneIdentifier)!
-        calendar.firstWeekday = 2
+        calendar.firstWeekday = 1
         return calendar
     }
 

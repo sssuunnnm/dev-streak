@@ -11,13 +11,13 @@ struct GitHubVerificationHelpView: View {
     @Environment(\.dismiss) private var dismiss
 
     private let items = [
-        "DevStreak는 sssuunnnm/dev-archive 저장소의 활동을 읽기 전용으로 확인합니다.",
-        "오늘 기술 블로그 콘텐츠 관련 commit이 확인되면 오늘 기록을 자동 완료할 수 있습니다.",
-        "src/content/articles, projects, references, snippets 경로 변경만 기록으로 인정합니다.",
-        "GitHub 저장소를 수정하거나 commit, PR을 생성하지 않습니다.",
-        "네트워크 오류나 GitHub API 확인 실패는 오늘 미작성으로 처리하지 않습니다.",
-        "더 안정적인 확인을 위해 개인 GitHub token을 연결할 수 있습니다.",
-        "token은 Keychain에 저장됩니다."
+        "GitHub Settings > Developer settings > Personal access tokens > Fine-grained tokens에서 새 token을 만듭니다.",
+        "Repository access는 확인할 저장소만 선택합니다.",
+        "Repository permissions는 Contents: Read-only, Pull requests: Read-only만 허용하면 됩니다.",
+        "생성한 token을 복사해 GitHub 연결 설정에 저장합니다.",
+        "token은 Keychain에만 저장되고 GitHub API Authorization header에만 사용됩니다.",
+        "DevStreak는 저장소를 수정하거나 commit, PR을 생성하지 않습니다.",
+        "네트워크 오류나 GitHub API 확인 실패는 오늘 미작성으로 처리하지 않습니다."
     ]
 
     var body: some View {
@@ -28,7 +28,7 @@ struct GitHubVerificationHelpView: View {
                         .font(DesignTokens.Typography.title3)
                         .foregroundStyle(DesignTokens.Color.primaryText)
 
-                    Text("기술 블로그 작업을 앱이 대신 확인해 오늘 기록 상태에 반영하는 기능입니다.")
+                    Text("GitHub 기록을 읽기 전용으로 확인해 오늘 상태에 반영하는 기능입니다.")
                         .font(DesignTokens.Typography.subheadline)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                 }

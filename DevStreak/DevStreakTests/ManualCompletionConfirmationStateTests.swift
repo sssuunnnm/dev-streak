@@ -11,7 +11,7 @@ import Testing
 struct ManualCompletionConfirmationStateTests {
     @Test func requestingCompletionOnlyPresentsConfirmation() {
         var state = ManualCompletionConfirmationState()
-        var didComplete = false
+        let didComplete = false
 
         state.request()
 
@@ -34,7 +34,7 @@ struct ManualCompletionConfirmationStateTests {
 
     @Test func cancellingCompletionDoesNotRunManualCompletionAction() {
         var state = ManualCompletionConfirmationState()
-        var didComplete = false
+        let didComplete = false
 
         state.request()
         state.cancel()

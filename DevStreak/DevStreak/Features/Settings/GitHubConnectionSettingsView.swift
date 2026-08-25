@@ -44,12 +44,18 @@ struct GitHubConnectionSettingsView: View {
             }
 
             Section {
-                SecureField("Fine-grained PAT", text: $token)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+                if hasSavedToken {
+                    Label("토큰이 Keychain에 저장되어 있습니다.", systemImage: "key.fill")
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+                } else {
+                    SecureField("Fine-grained PAT", text: $token)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
 
-                Button("토큰 저장") {
-                    saveToken()
+                    Button("토큰 저장") {
+                        saveToken()
+                    }
+                    .disabled(token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
 
                 Button("연결 테스트") {
@@ -63,7 +69,7 @@ struct GitHubConnectionSettingsView: View {
                     }
                 }
             } footer: {
-                Text("sssuunnnm/dev-archive 읽기 권한만 사용합니다. 토큰은 Keychain에만 저장됩니다.")
+                Text("저장소 확인에는 읽기 권한만 사용하며 토큰은 Keychain에만 저장됩니다.")
             }
 
             Section {
@@ -72,7 +78,7 @@ struct GitHubConnectionSettingsView: View {
                         .font(DesignTokens.Typography.headline)
                         .foregroundStyle(DesignTokens.Color.primaryText)
 
-                    Text("GitHub의 기술 블로그 기록을 확인해 이전 작성일을 캘린더에 반영합니다.")
+                    Text("최근 GitHub 기록을 캘린더에 반영합니다.")
                         .font(DesignTokens.Typography.subheadline)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -84,9 +90,11 @@ struct GitHubConnectionSettingsView: View {
                 }
                 .disabled(backfillState == .syncing)
 
-                Text(backfillState.message)
-                    .font(DesignTokens.Typography.footnote)
-                    .foregroundStyle(backfillState.tint)
+                if let message = backfillState.message {
+                    Text(message)
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundStyle(backfillState.tint)
+                }
             }
         }
         .navigationTitle("GitHub 연결")
@@ -105,7 +113,7 @@ struct GitHubConnectionSettingsView: View {
 
             Button("취소", role: .cancel) {}
         } message: {
-            Text("기술 블로그 콘텐츠 변경이 확인된 날짜를 완료 기록으로 추가합니다. 기존 기록은 삭제되지 않습니다.")
+            Text("GitHub 기록이 확인된 날짜를 완료 기록으로 추가합니다. 기존 기록은 삭제되지 않습니다.")
         }
     }
 
@@ -199,10 +207,10 @@ private enum GitHubBackfillViewState: Equatable {
     case completedWithoutChanges
     case failed(GitHubBackfillFailure)
 
-    var message: String {
+    var message: String? {
         switch self {
         case .idle:
-            return "최근 30일 범위로 확인합니다."
+            return nil
         case .syncing:
             return "GitHub 기록 확인 중..."
         case .completed(let changedDayCount):
@@ -242,7 +250,7 @@ private extension GitHubVerificationFailure {
         case .unauthorizedOrForbidden:
             return "GitHub 연결을 다시 확인해 주세요."
         case .notFound:
-            return "dev-archive 저장소 접근 권한을 확인해 주세요."
+            return "저장소 접근 권한을 확인해 주세요."
         case .credentialUnavailable:
             return "저장된 GitHub 인증 정보를 불러오지 못했습니다."
         case .networkFailure:
@@ -280,7 +288,7 @@ private enum GitHubConnectionState: Equatable {
     func message(hasSavedToken: Bool) -> String {
         switch self {
         case .idle:
-            return hasSavedToken ? "토큰이 저장되어 있습니다." : "GitHub 연결이 필요합니다."
+            return hasSavedToken ? "연결 테스트로 저장소 접근을 확인할 수 있습니다." : "GitHub 연결이 필요합니다."
         case .needsToken:
             return "GitHub 연결이 필요합니다."
         case .saved:
@@ -301,7 +309,7 @@ private enum GitHubConnectionState: Equatable {
     }
 }
 
-enum GitHubConnectionFailure: Error, Equatable {
+nonisolated enum GitHubConnectionFailure: Error, Equatable {
     case invalidToken
     case forbidden
     case repositoryNotFound
@@ -318,7 +326,7 @@ enum GitHubConnectionFailure: Error, Equatable {
         case .forbidden:
             return "GitHub 접근 권한을 확인해 주세요."
         case .repositoryNotFound:
-            return "dev-archive 저장소 접근 권한을 확인해 주세요."
+            return "저장소 접근 권한을 확인해 주세요."
         case .credentialUnavailable:
             return "저장된 GitHub 인증 정보를 불러오지 못했습니다."
         case .rateLimited(let diagnostics):
@@ -337,15 +345,15 @@ enum GitHubConnectionFailure: Error, Equatable {
     }
 }
 
-struct GitHubConnectionTestService {
+nonisolated struct GitHubConnectionTestService {
     private let client: GitHubAPIClientProtocol
     private let owner: String
     private let repository: String
 
     init(
         client: GitHubAPIClientProtocol = GitHubAPIClient(),
-        owner: String = "sssuunnnm",
-        repository: String = "dev-archive"
+        owner: String = GitHubRepositoryConfiguration.owner,
+        repository: String = GitHubRepositoryConfiguration.name
     ) {
         self.client = client
         self.owner = owner

@@ -15,7 +15,13 @@ struct ReminderSettingsView: View {
     private let notificationService = ReminderNotificationService()
 
     @State private var settings = ReminderSettings.default
+    @State private var savedSettings = ReminderSettings.default
     @State private var authorizationStatus = ReminderAuthorizationStatus.notDetermined
+    @State private var isApplyConfirmationPresented = false
+
+    private var hasPendingChanges: Bool {
+        settings != savedSettings
+    }
 
     var body: some View {
         Form {
@@ -32,18 +38,49 @@ struct ReminderSettingsView: View {
                 )
             }
 
-            Section("리마인더") {
+            Section {
                 reminderRow(slot: .morning)
                 reminderRow(slot: .evening)
                 reminderRow(slot: .night)
+            } header: {
+                Text("리마인더")
+            } footer: {
+                Text(hasPendingChanges ? "변경사항을 적용하면 알림 일정이 다시 설정됩니다." : "시간이나 토글을 바꾼 뒤 변경사항을 적용할 수 있습니다.")
+            }
+
+            if hasPendingChanges {
+                Section {
+                    Button("변경사항 적용") {
+                        isApplyConfirmationPresented = true
+                    }
+
+                    Button("변경 취소", role: .cancel) {
+                        settings = savedSettings
+                    }
+                }
             }
         }
         .navigationTitle("알림 설정")
         .font(DesignTokens.Typography.body)
         .task {
-            settings = store.load()
+            let loadedSettings = store.load()
+            settings = loadedSettings
+            savedSettings = loadedSettings
             await refreshAuthorizationStatus()
             await syncSchedule()
+        }
+        .confirmationDialog(
+            "알림 설정을 적용할까요?",
+            isPresented: $isApplyConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button("적용") {
+                applyPendingChanges()
+            }
+
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("변경된 시간과 토글 상태로 앞으로의 알림을 다시 설정합니다.")
         }
     }
 
@@ -95,12 +132,6 @@ struct ReminderSettingsView: View {
 
     private func updatePreference(_ preference: ReminderPreference, for slot: ReminderSlot) {
         settings.setPreference(preference, for: slot)
-        store.save(settings)
-
-        Task {
-            await refreshAuthorizationStatus()
-            await syncSchedule()
-        }
     }
 
     private func requestPermission() async {
@@ -115,9 +146,19 @@ struct ReminderSettingsView: View {
 
     private func syncSchedule() async {
         await notificationService.syncRollingSchedule(
-            settings: settings,
+            settings: savedSettings,
             isTodayCompleted: isTodayCompleted
         )
+    }
+
+    private func applyPendingChanges() {
+        savedSettings = settings
+        store.save(settings)
+
+        Task {
+            await refreshAuthorizationStatus()
+            await syncSchedule()
+        }
     }
 
     private func date(for preference: ReminderPreference) -> Date {

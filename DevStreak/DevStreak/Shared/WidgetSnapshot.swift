@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct WidgetSnapshot: Codable, Equatable {
+nonisolated struct WidgetSnapshot: Codable, Equatable {
     var dateKey: String
     var isTodayCompleted: Bool
     var currentStreak: Int

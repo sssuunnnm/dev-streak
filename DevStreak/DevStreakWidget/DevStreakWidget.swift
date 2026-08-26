@@ -145,7 +145,7 @@ private struct DevStreakTodaySmallWidgetView: View {
                     .lineLimit(1)
             }
 
-            WidgetTodayStatusMark(isCompleted: entry.displayState.isTodayCompleted, size: 48)
+            WidgetTodayStatusMark(isCompleted: entry.displayState.isTodayCompleted, size: 48, yOffset: 18)
 
             Spacer(minLength: 0)
 
@@ -208,6 +208,7 @@ private struct WidgetIdeaMemoCountView: View {
 private struct WidgetTodayStatusMark: View {
     let isCompleted: Bool
     let size: CGFloat
+    var yOffset: CGFloat = 0
 
     private var symbolName: String {
         isCompleted ? "circle" : "xmark"
@@ -221,6 +222,7 @@ private struct WidgetTodayStatusMark: View {
             .minimumScaleFactor(0.75)
             .frame(width: size + 8, height: size + 8, alignment: .center)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .offset(y: yOffset)
             .accessibilityLabel(isCompleted ? "오늘 기록 완료" : "오늘 기록 미완료")
     }
 }

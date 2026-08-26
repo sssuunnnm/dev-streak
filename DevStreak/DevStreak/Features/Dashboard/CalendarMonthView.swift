@@ -10,6 +10,7 @@ import SwiftUI
 struct CalendarMonthView: View {
     let records: [DailyRecord]
     let now: Date
+    let isTrackingEnabled: Bool
     let repositoryCreatedAt: Date?
 
     @State private var visibleMonth: Date
@@ -20,9 +21,15 @@ struct CalendarMonthView: View {
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
     private let dayCellHeight: CGFloat = 34
 
-    init(records: [DailyRecord], now: Date, repositoryCreatedAt: Date? = nil) {
+    init(
+        records: [DailyRecord],
+        now: Date,
+        isTrackingEnabled: Bool = true,
+        repositoryCreatedAt: Date? = nil
+    ) {
         self.records = records
         self.now = now
+        self.isTrackingEnabled = isTrackingEnabled
         self.repositoryCreatedAt = repositoryCreatedAt
         _visibleMonth = State(initialValue: DateService().startOfMonth(containing: now) ?? now)
     }
@@ -32,6 +39,7 @@ struct CalendarMonthView: View {
             containing: visibleMonth,
             records: records,
             now: now,
+            isTrackingEnabled: isTrackingEnabled,
             trackingStartDate: repositoryCreatedAt
         )
     }
@@ -41,6 +49,7 @@ struct CalendarMonthView: View {
             containing: visibleMonth,
             records: records,
             now: now,
+            isTrackingEnabled: isTrackingEnabled,
             trackingStartDate: repositoryCreatedAt
         )
     }
@@ -54,6 +63,10 @@ struct CalendarMonthView: View {
     }
 
     private var earliestVisibleMonth: Date {
+        guard isTrackingEnabled else {
+            return currentMonth
+        }
+
         let threeYearStart = dateService
             .addingMonths(-36, to: currentMonth)
             .flatMap { dateService.startOfMonth(containing: $0) } ?? currentMonth

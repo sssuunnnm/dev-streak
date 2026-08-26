@@ -252,12 +252,14 @@ Current Streak = 4
 5. `untracked`
 
 - GitHub repository 생성일 이전 날짜
+- GitHub token이 저장되어 있지 않아 verification이 비활성화된 날짜
 - 배경 없이 숫자만 약하게 표시
 - monthly completion rate 분자/분모에서 항상 제외
 
 Monthly completion rate rules:
 
 - GitHub repository 생성일 이전 날짜는 분모에서 제외한다.
+- GitHub token이 삭제되어 verification이 비활성화되면 calendar는 중립 상태로 표시한다.
 - 오늘이 pending이면 오늘은 분모에서 제외한다.
 - 종료된 과거 날짜만 분모로 사용한다.
 - 오늘을 완료하면 오늘을 분자와 분모에 포함한다.
@@ -532,6 +534,7 @@ Authentication and security rules:
 - Token이 있으면 `Authorization: Bearer <token>` header를 사용한다.
 - Token은 Keychain에만 저장한다.
 - Token이 저장되어 있으면 GitHub 연결 설정 화면에서 token 입력칸은 숨기고 연결 테스트와 삭제 action만 제공한다.
+- Token을 삭제하면 local GitHub verification 기록과 repository metadata도 초기화한다.
 - Token을 UserDefaults에 평문 저장하지 않는다.
 - Token을 hardcode하지 않는다.
 - Token을 error나 log에 노출하지 않는다.

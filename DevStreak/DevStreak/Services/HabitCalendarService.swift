@@ -49,6 +49,7 @@ struct HabitCalendarService {
         containing date: Date,
         records: [DailyRecord],
         now: Date = .now,
+        isTrackingEnabled: Bool = true,
         trackingStartDate: Date? = nil
     ) -> [HabitCalendarDay] {
         dateService.monthDateKeys(containing: date).compactMap { dateKey in
@@ -63,6 +64,7 @@ struct HabitCalendarService {
                     for: dateKey,
                     records: records,
                     now: now,
+                    isTrackingEnabled: isTrackingEnabled,
                     trackingStartDate: trackingStartDate
                 )
             )
@@ -73,8 +75,17 @@ struct HabitCalendarService {
         for dateKey: String,
         records: [DailyRecord],
         now: Date = .now,
+        isTrackingEnabled: Bool = true,
         trackingStartDate: Date? = nil
     ) -> DailyStatus {
+        let todayKey = dateService.todayKey(now: now)
+
+        guard isTrackingEnabled else {
+            return dateService.compare(dateKey, todayKey) == .orderedDescending
+                ? .future
+                : .untracked
+        }
+
         if let trackingStartDate {
             let trackingStartKey = dateService.dateKey(for: trackingStartDate)
             if dateService.compare(dateKey, trackingStartKey) == .orderedAscending {
@@ -82,7 +93,6 @@ struct HabitCalendarService {
             }
         }
 
-        let todayKey = dateService.todayKey(now: now)
         switch dateService.compare(dateKey, todayKey) {
         case .orderedAscending:
             let completedDateKeys = Set(records.filter { $0.status.isCompleted }.map(\.dateKey))
@@ -101,12 +111,14 @@ struct HabitCalendarService {
         containing date: Date,
         records: [DailyRecord],
         now: Date = .now,
+        isTrackingEnabled: Bool = true,
         trackingStartDate: Date? = nil
     ) -> MonthlyCompletionRate {
         let monthDays = days(
             containing: date,
             records: records,
             now: now,
+            isTrackingEnabled: isTrackingEnabled,
             trackingStartDate: trackingStartDate
         )
 

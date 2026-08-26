@@ -15,6 +15,7 @@ struct GitHubConnectionSettingsView: View {
 
     private let credentialStore = GitHubCredentialStore()
     private let repositoryMetadataStore = GitHubRepositoryMetadataStore()
+    private let widgetSnapshotService = WidgetSnapshotService()
     private let backfillService = GitHubBackfillService()
     private let initialBackfillService = GitHubBackfillService(
         lookbackDays: GitHubVerificationDefaults.initialBackfillLookbackDays,
@@ -158,6 +159,13 @@ struct GitHubConnectionSettingsView: View {
             connectionState = .needsToken
             initialBackfillStore.reset()
             repositoryMetadataStore.reset()
+
+            for record in records {
+                modelContext.delete(record)
+            }
+
+            try modelContext.save()
+            widgetSnapshotService.updateSnapshot(records: [], ideas: ideas, now: Date())
         } catch {
             connectionState = .failed(.credentialUnavailable)
         }

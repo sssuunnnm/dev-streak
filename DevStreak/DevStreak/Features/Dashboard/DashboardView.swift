@@ -30,6 +30,7 @@ struct DashboardView: View {
     @State private var githubVerificationTask: Task<Void, Never>?
     @State private var lastGitHubAutomaticVerificationAt: Date?
     @State private var isGitHubConnectionSettingsPresented = false
+    @State private var isGitHubCalendarTrackingEnabled = false
     @State private var repositoryCreatedAt: Date?
 
     private var now: Date {
@@ -91,6 +92,7 @@ struct DashboardView: View {
                     CalendarMonthView(
                         records: records,
                         now: now,
+                        isTrackingEnabled: isGitHubCalendarTrackingEnabled,
                         repositoryCreatedAt: repositoryCreatedAt
                     )
 
@@ -178,7 +180,14 @@ struct DashboardView: View {
     }
 
     private func refreshGitHubRepositoryMetadata() {
-        repositoryCreatedAt = githubRepositoryMetadataStore.createdAt
+        switch githubTokenAvailability() {
+        case .available:
+            isGitHubCalendarTrackingEnabled = true
+            repositoryCreatedAt = githubRepositoryMetadataStore.createdAt
+        case .missing, .unavailable:
+            isGitHubCalendarTrackingEnabled = false
+            repositoryCreatedAt = nil
+        }
     }
 
     private func handleDeepLink(_ url: URL) {

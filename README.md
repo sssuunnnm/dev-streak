@@ -102,6 +102,8 @@ Current streak는 다음 규칙을 따릅니다.
 
 월간 달성률은 completed와 missed만 분모로 사용합니다. 오늘이 pending이면 월간 달성률 분모에서 제외되며, 오늘 완료 시에만 분자와 분모에 포함됩니다. 미래 날짜와 GitHub 저장소 생성일 이전 날짜는 항상 제외됩니다.
 
+GitHub token이 삭제되면 로컬 검증 기록과 repository metadata를 함께 초기화하고, 달력은 다시 중립 상태로 표시합니다.
+
 ### Reminder Notifications
 
 Reminder는 UserNotifications 기반 local notification으로 동작합니다.

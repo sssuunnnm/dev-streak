@@ -5,7 +5,8 @@ Last updated: 2026-08-26
 ## Version
 
 - Version: `1.0`
-- Build: 새 TestFlight 빌드 업로드 후 선택
+- Submission status: 2026-08-26 App Store review 제출 완료
+- Build: App Store Connect에서 제출한 1.0 빌드
 - Release option: 수동으로 버전 출시
 
 ## App Information
@@ -22,6 +23,14 @@ Last updated: 2026-08-26
 - Secondary Category: 생산성
 - Content Rights: 앱이 GitHub 기록에 접근하므로, 질문이 "타사 콘텐츠를 포함, 표시 또는 접근하는가"라면 `예`를 선택하고 사용자가 직접 연결한 GitHub 토큰의 읽기 권한으로 접근한다고 본다.
 - License Agreement: Apple의 표준 사용권 계약
+
+## Pricing And Availability
+
+- Price: 무료
+- Availability: 대한민국
+- Distribution method: 공개 - App Store에서 모든 사용자가 검색 가능
+- Apple silicon Mac availability: 사용하지 않음
+- Apple Vision Pro availability: 사용하지 않음
 
 ## Age Rating
 

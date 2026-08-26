@@ -504,11 +504,11 @@ private struct GitHubVerificationRow: View {
                     .foregroundStyle(DesignTokens.Color.textSecondary)
 
                 if let symbolName = state.statusSymbolName {
-                    Image(systemName: symbolName)
-                        .font(.system(size: 10, weight: .medium))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(state.tint)
-                        .verificationStatusSymbolEffect(isChecking: state == .checking)
+                    GitHubVerificationStatusSymbol(
+                        symbolName: symbolName,
+                        tint: state.tint,
+                        isChecking: state == .checking
+                    )
                 }
             }
 
@@ -601,13 +601,36 @@ private struct GitHubConnectionRequiredCard: View {
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func verificationStatusSymbolEffect(isChecking: Bool) -> some View {
-        if #available(iOS 18.0, *) {
-            symbolEffect(.rotate, options: .repeating, value: isChecking)
-        } else {
-            self
+private struct GitHubVerificationStatusSymbol: View {
+    let symbolName: String
+    let tint: Color
+    let isChecking: Bool
+
+    @State private var rotation = 0.0
+
+    var body: some View {
+        Image(systemName: symbolName)
+            .font(.system(size: 10, weight: .medium))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(tint)
+            .rotationEffect(.degrees(isChecking ? rotation : 0))
+            .onAppear {
+                updateRotation()
+            }
+            .onChange(of: isChecking) { _, _ in
+                updateRotation()
+            }
+    }
+
+    private func updateRotation() {
+        guard isChecking else {
+            rotation = 0
+            return
+        }
+
+        rotation = 0
+        withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
+            rotation = 360
         }
     }
 }

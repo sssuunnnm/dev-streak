@@ -15,6 +15,7 @@ struct GitHubConnectionSettingsView: View {
 
     private let credentialStore = GitHubCredentialStore()
     private let backfillService = GitHubBackfillService()
+    private let initialBackfillStore = GitHubInitialBackfillStore()
 
     @State private var token = ""
     @State private var hasSavedToken = false
@@ -101,6 +102,7 @@ struct GitHubConnectionSettingsView: View {
         .font(DesignTokens.Typography.body)
         .task {
             refreshSavedState()
+            runInitialBackfillIfNeeded()
         }
         .confirmationDialog(
             "최근 30일의 GitHub 기록을 확인할까요?",
@@ -135,6 +137,7 @@ struct GitHubConnectionSettingsView: View {
             token = ""
             hasSavedToken = try credentialStore.hasToken()
             connectionState = hasSavedToken ? .saved : .needsToken
+            runInitialBackfillIfNeeded()
         } catch {
             connectionState = .failed(.credentialUnavailable)
         }
@@ -146,6 +149,7 @@ struct GitHubConnectionSettingsView: View {
             token = ""
             hasSavedToken = false
             connectionState = .needsToken
+            initialBackfillStore.reset()
         } catch {
             connectionState = .failed(.credentialUnavailable)
         }
@@ -174,6 +178,20 @@ struct GitHubConnectionSettingsView: View {
     }
 
     private func runBackfill() {
+        runBackfill(markInitialBackfillCompleted: true)
+    }
+
+    private func runInitialBackfillIfNeeded() {
+        guard hasSavedToken,
+              !initialBackfillStore.hasCompletedInitialBackfill,
+              backfillState != .syncing else {
+            return
+        }
+
+        runBackfill(markInitialBackfillCompleted: true)
+    }
+
+    private func runBackfill(markInitialBackfillCompleted: Bool) {
         backfillState = .syncing
 
         Task {
@@ -187,6 +205,10 @@ struct GitHubConnectionSettingsView: View {
             await MainActor.run {
                 switch result {
                 case .success(let backfillResult):
+                    if markInitialBackfillCompleted {
+                        initialBackfillStore.markCompleted()
+                    }
+
                     backfillState = backfillResult.changedDayCount > 0
                         ? .completed(changedDayCount: backfillResult.changedDayCount)
                         : .completedWithoutChanges
@@ -197,6 +219,27 @@ struct GitHubConnectionSettingsView: View {
                 refreshSavedState()
             }
         }
+    }
+}
+
+private struct GitHubInitialBackfillStore {
+    private let userDefaults: UserDefaults
+    private let key = "githubInitialBackfillCompleted"
+
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+    }
+
+    var hasCompletedInitialBackfill: Bool {
+        userDefaults.bool(forKey: key)
+    }
+
+    func markCompleted() {
+        userDefaults.set(true, forKey: key)
+    }
+
+    func reset() {
+        userDefaults.removeObject(forKey: key)
     }
 }
 

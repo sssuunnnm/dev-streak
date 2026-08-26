@@ -439,7 +439,6 @@ DailyRecord, Idea 전체 모델을 Widget target에 불필요하게 공유하지
 
 Widget refresh rules:
 
-- manual completion 후 Widget timeline reload를 요청한다.
 - GitHub verification 후 Widget timeline reload를 요청한다.
 - app launch 또는 app active 시 날짜 변경 감지 후 필요한 경우 snapshot을 갱신한다.
 - 필요한 경우 Idea 변경 후 snapshot을 갱신한다.
@@ -516,7 +515,6 @@ Persistence rules:
 - `manualCompleted`이면 `githubVerified`로 승격할 수 있다.
 - 이미 `githubVerified`이면 중복 record를 만들지 않는다.
 - GitHub verification 실패, offline, rate limit, auth 실패는 missed로 기록하지 않는다.
-- manual completion은 GitHub verification 이후에도 계속 지원한다.
 
 Authentication and security rules:
 
@@ -539,7 +537,8 @@ API rules:
 - 동일 commit은 중복 처리하지 않는다.
 - network 실패는 사용자에게 재시도 가능한 상태로 표시한다.
 - Dashboard verification 기본 lookback은 최근 7일이다.
-- 사용자가 명시적으로 실행하는 history sync는 최근 30일을 확인한다.
+- 최초 GitHub 연결 후 history sync는 최근 30일을 자동으로 한 번 확인한다.
+- 사용자가 명시적으로 실행하는 history sync도 최근 30일을 확인한다.
 - 오늘 DailyRecord가 이미 `githubVerified`이면 앱 실행/활성화 시 자동 verification을 다시 실행하지 않는다.
 - background polling 또는 server-side scheduler는 구현하지 않는다.
 

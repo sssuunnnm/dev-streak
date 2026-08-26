@@ -51,6 +51,10 @@ struct DashboardView: View {
         todayRecord?.status == .githubVerified
     }
 
+    private var isTodayManuallyCompleted: Bool {
+        todayRecord?.status == .manualCompleted
+    }
+
     private var currentStreak: Int {
         streakService.currentStreak(records: records, now: now)
     }
@@ -74,9 +78,11 @@ struct DashboardView: View {
                         bestStreak: bestStreak,
                         completionSource: completionSourceText,
                         verificationState: githubVerificationState,
+                        canRevertManualCompletion: isTodayManuallyCompleted,
                         writeAction: {
                             manualCompletionConfirmation.request()
                         },
+                        revertAction: revertTodayManualCompletion,
                         refreshAction: verifyGitHubActivity,
                         connectionAction: {
                             isGitHubConnectionSettingsPresented = true
@@ -213,6 +219,36 @@ struct DashboardView: View {
             }
         } catch {
             saveErrorMessage = "오늘 기록을 저장하지 못했습니다."
+        }
+    }
+
+    private func revertTodayManualCompletion() {
+        let rollbackDate = Date()
+        let rollbackDateKey = dateService.todayKey(now: rollbackDate)
+
+        guard let record = records.first(where: { $0.dateKey == rollbackDateKey }),
+              record.status == .manualCompleted else {
+            return
+        }
+
+        record.status = .pending
+        record.completedAt = nil
+
+        do {
+            try modelContext.save()
+            saveErrorMessage = nil
+            refreshWidgetSnapshot(now: rollbackDate)
+
+            Task {
+                await reminderNotificationService.syncRollingSchedule(
+                    settings: reminderSettingsStore.load(),
+                    isTodayCompleted: false,
+                    now: rollbackDate
+                )
+            }
+        } catch {
+            modelContext.rollback()
+            saveErrorMessage = "오늘 기록을 되돌리지 못했습니다."
         }
     }
 
@@ -421,7 +457,9 @@ private struct PrimaryGoalCard: View {
     let bestStreak: Int
     let completionSource: String
     let verificationState: GitHubVerificationViewState
+    let canRevertManualCompletion: Bool
     let writeAction: () -> Void
+    let revertAction: () -> Void
     let refreshAction: () -> Void
     let connectionAction: () -> Void
 
@@ -432,7 +470,9 @@ private struct PrimaryGoalCard: View {
         bestStreak: Int,
         completionSource: String,
         verificationState: GitHubVerificationViewState,
+        canRevertManualCompletion: Bool,
         writeAction: @escaping () -> Void,
+        revertAction: @escaping () -> Void,
         refreshAction: @escaping () -> Void,
         connectionAction: @escaping () -> Void
     ) {
@@ -442,7 +482,9 @@ private struct PrimaryGoalCard: View {
         self.bestStreak = bestStreak
         self.completionSource = completionSource
         self.verificationState = verificationState
+        self.canRevertManualCompletion = canRevertManualCompletion
         self.writeAction = writeAction
+        self.revertAction = revertAction
         self.refreshAction = refreshAction
         self.connectionAction = connectionAction
     }
@@ -485,6 +527,11 @@ private struct PrimaryGoalCard: View {
                     Label("오늘 기록 완료", systemImage: "checkmark.circle")
                 }
                 .buttonStyle(TactileButtonStyle(tint: DesignTokens.Color.accent))
+            } else if canRevertManualCompletion {
+                Button(action: revertAction) {
+                    Label("오늘 기록 취소", systemImage: "arrow.uturn.backward.circle")
+                }
+                .buttonStyle(TactileButtonStyle(tint: DesignTokens.Color.textSecondary))
             }
 
             GitHubVerificationRow(

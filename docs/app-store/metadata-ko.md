@@ -28,8 +28,7 @@ PNG 이미지는 App Store Connect의 "앱 미리보기"가 아니라 "스크린
 ## Description
 
 DevStreak는 GitHub 기록을 꾸준히 이어가고 싶은 사람을 위한 가벼운 iOS 앱입니다.
-
-매일 하나의 기록을 남기는 습관을 눈에 보이게 만들고, GitHub 커밋 기록을 바탕으로 오늘의 기록 여부와 연속 기록을 확인할 수 있습니다.
+매일 하나의 기록을 남기는 습관을 눈에 보이게 만들고 GitHub 커밋 기록을 바탕으로 오늘의 기록 여부와 연속 기록을 확인할 수 있습니다.
 
 주요 기능
 
@@ -41,9 +40,8 @@ DevStreak는 GitHub 기록을 꾸준히 이어가고 싶은 사람을 위한 가
 - 기록 리마인더 알림
 - 홈 화면 및 잠금 화면 위젯 지원
 
-GitHub 연결은 읽기 권한만 사용합니다. 토큰은 기기 Keychain에만 저장되며, DevStreak 개발자는 사용자의 기록, 메모, 알림 설정, GitHub 토큰을 수집하거나 서버로 전송하지 않습니다.
-
-현재 버전은 하나의 저장소를 기준으로 기록을 확인하는 MVP입니다. GitHub write 작업, PR 생성, 저장소 수정, 별도 백엔드 동기화는 수행하지 않습니다.
+GitHub 연결은 읽기 권한만 사용합니다. 토큰은 기기 Keychain에만 저장되며 DevStreak 개발자는 사용자의 기록, 메모, 알림 설정, GitHub 토큰을 수집하거나 서버로 전송하지 않습니다.
+현재 버전은 하나의 저장소를 기준으로 기록을 확인합니다. 추후 확장될 예정입니다.
 
 ## Keywords
 
@@ -57,7 +55,11 @@ TBD: Notion 또는 간단한 공개 support page URL을 입력한다.
 
 ## Marketing URL
 
-선택 사항. MVP 제출에서는 비워둔다.
+공백으로 둔다.
+
+## Routing App Coverage File
+
+공백으로 둔다.
 
 ## Copyright
 
@@ -82,6 +84,10 @@ TBD: Notion 또는 간단한 공개 support page URL을 입력한다.
 GitHub 연결은 사용자가 직접 발급한 fine-grained personal access token을 기기 Keychain에 저장해 사용하는 선택 기능입니다. 앱은 GitHub 저장소에 쓰기 작업을 하지 않으며, read-only API 요청으로 커밋 기록을 확인합니다.
 
 앱의 기록, 아이디어 메모, 알림 설정은 기기 내에 저장됩니다. 개발자 서버, analytics SDK, tracking SDK는 사용하지 않습니다.
+
+### Attachment
+
+공백으로 둔다.
 
 ## App Privacy Summary
 

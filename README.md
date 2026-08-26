@@ -256,7 +256,7 @@ xcodebuild \
   build
 ```
 
-Run tests:
+Run unit tests:
 
 ```bash
 xcodebuild \
@@ -268,9 +268,23 @@ xcodebuild \
   test
 ```
 
+Run UI tests:
+
+```bash
+xcodebuild \
+  -project DevStreak/DevStreak.xcodeproj \
+  -scheme DevStreak \
+  -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0.1' \
+  CODE_SIGNING_ALLOWED=NO \
+  -only-testing:DevStreakUITests \
+  test
+```
+
 ## App Store Assets
 
-App Store / TestFlight 제출용 metadata와 preview image 초안은 repo 안에 보관합니다.
+App Store / TestFlight 제출용 preview image 초안은 repo 안에 보관합니다.
+
+App Store Connect metadata는 `docs/app-store/metadata-ko.md`에서 로컬 전용으로 관리하며, `.gitignore`로 추적하지 않습니다.
 
 - [Preview-1.png](docs/app-store/previews/Preview-1.png): 하루 기록과 dashboard
 - [Preview-2.png](docs/app-store/previews/Preview-2.png): GitHub 연결 필요 상태

@@ -553,6 +553,24 @@ private struct GitHubVerificationRow: View {
     }
 
     var body: some View {
+        if state == .needsConnection {
+            GitHubConnectionRequiredCard(
+                connectAction: connectionAction,
+                helpAction: {
+                    isHelpPresented = true
+                }
+            )
+            .sheet(isPresented: $isHelpPresented) {
+                NavigationStack {
+                    GitHubVerificationHelpView()
+                }
+            }
+        } else {
+            compactStatusRow
+        }
+    }
+
+    private var compactStatusRow: some View {
         HStack(spacing: 12) {
             HStack(spacing: 5) {
                 Text(state.message(isTodayCompleted: isTodayCompleted))
@@ -599,6 +617,60 @@ private struct GitHubVerificationRow: View {
                     }
                 }
             }
+        }
+    }
+}
+
+private struct GitHubConnectionRequiredCard: View {
+    let connectAction: () -> Void
+    let helpAction: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "link.circle.fill")
+                    .font(.system(size: 24, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(DesignTokens.Color.accent)
+                    .frame(width: 32, height: 32)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("GitHub 연결이 필요합니다")
+                        .font(DesignTokens.Typography.headline)
+                        .foregroundStyle(DesignTokens.Color.primaryText)
+
+                    Text("커밋 기반 기록 확인을 사용하려면 읽기 권한 토큰을 연결해 주세요.")
+                        .font(DesignTokens.Typography.subheadline)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                Button(action: helpAction) {
+                    Image(systemName: "questionmark.circle")
+                        .font(.system(size: 17, weight: .medium))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(DesignTokens.Color.textSecondary)
+                .accessibilityLabel("GitHub 연결 도움말")
+            }
+
+            Button(action: connectAction) {
+                Label("GitHub 연결하기", systemImage: "key")
+            }
+            .buttonStyle(TactileButtonStyle(tint: DesignTokens.Color.accent))
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.72))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(DesignTokens.Color.hairline.opacity(0.55), lineWidth: 0.5)
+                }
         }
     }
 }

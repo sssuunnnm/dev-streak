@@ -131,6 +131,7 @@ struct DashboardView: View {
                 isPresented: $isGitHubConnectionSettingsPresented,
                 onDismiss: {
                     refreshGitHubConnectionState()
+                    refreshCachedGitHubVerificationState()
                     verifyGitHubActivityIfNeeded(now: Date())
                 }
             ) {
@@ -238,8 +239,14 @@ struct DashboardView: View {
     }
 
     private func verifyGitHubActivityIfNeeded(now: Date) {
-        guard hasSavedGitHubToken() else {
+        switch githubTokenAvailability() {
+        case .available:
+            break
+        case .missing:
             githubVerificationState = .needsConnection
+            return
+        case .unavailable:
+            githubVerificationState = .failure(.credentialUnavailable)
             return
         }
 
@@ -257,13 +264,15 @@ struct DashboardView: View {
     }
 
     private func verifyGitHubActivity() {
-        guard hasSavedGitHubToken() else {
+        switch githubTokenAvailability() {
+        case .available:
+            verifyGitHubActivity(now: Date())
+        case .missing:
             githubVerificationState = .needsConnection
             isGitHubConnectionSettingsPresented = true
-            return
+        case .unavailable:
+            githubVerificationState = .failure(.credentialUnavailable)
         }
-
-        verifyGitHubActivity(now: Date())
     }
 
     private func refreshCachedGitHubVerificationState() {
@@ -279,11 +288,24 @@ struct DashboardView: View {
             return
         }
 
-        githubVerificationState = hasSavedGitHubToken() ? .idle : .needsConnection
+        switch githubTokenAvailability() {
+        case .available:
+            if githubVerificationState == .needsConnection {
+                githubVerificationState = .idle
+            }
+        case .missing:
+            githubVerificationState = .needsConnection
+        case .unavailable:
+            githubVerificationState = .failure(.credentialUnavailable)
+        }
     }
 
-    private func hasSavedGitHubToken() -> Bool {
-        (try? githubCredentialStore.hasToken()) == true
+    private func githubTokenAvailability() -> GitHubTokenAvailability {
+        do {
+            return try githubCredentialStore.hasToken() ? .available : .missing
+        } catch {
+            return .unavailable
+        }
     }
 
     private func verifyGitHubActivity(now verificationDate: Date) {
@@ -713,6 +735,12 @@ private enum GitHubVerificationViewState: Equatable {
             return "GitHub 기록이 많아 확인을 완료하지 못했습니다"
         }
     }
+}
+
+private enum GitHubTokenAvailability {
+    case available
+    case missing
+    case unavailable
 }
 
 #Preview {

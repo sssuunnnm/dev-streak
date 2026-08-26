@@ -205,10 +205,6 @@ private struct WidgetRecentDaysStrip: View {
     let days: [WidgetRecentDay]
     let style: WidgetRecentDaysStripStyle
 
-    private var displayDays: [WidgetRecentDay] {
-        days.isEmpty ? WidgetRecentDay.previewWeek : days
-    }
-
     var body: some View {
         ZStack(alignment: .bottom) {
             Rectangle()
@@ -218,26 +214,35 @@ private struct WidgetRecentDaysStrip: View {
                 .offset(y: style.lineOffset)
 
             HStack(alignment: .bottom, spacing: 0) {
-                ForEach(displayDays) { day in
-                    VStack(spacing: 6) {
-                        if style.showsDayNumbers {
-                            Text("\(day.dayNumber)")
-                                .font(WidgetTypography.caption)
-                                .foregroundStyle(day.isToday ? WidgetPalette.primaryText : WidgetPalette.mutedText)
-                                .monospacedDigit()
-                        }
-
+                if days.isEmpty {
+                    ForEach(0..<7, id: \.self) { _ in
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(day.isCompleted ? WidgetPalette.accent : WidgetPalette.track)
+                            .fill(WidgetPalette.track)
                             .frame(width: style.markerSize.width, height: style.markerSize.height)
-                            .overlay {
-                                if day.isToday && !day.isCompleted {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(WidgetPalette.accent.opacity(0.45), lineWidth: 1.2)
-                                }
-                            }
+                            .frame(maxWidth: .infinity)
                     }
-                    .frame(maxWidth: .infinity)
+                } else {
+                    ForEach(days) { day in
+                        VStack(spacing: 6) {
+                            if style.showsDayNumbers {
+                                Text("\(day.dayNumber)")
+                                    .font(WidgetTypography.caption)
+                                    .foregroundStyle(day.isToday ? WidgetPalette.primaryText : WidgetPalette.mutedText)
+                                    .monospacedDigit()
+                            }
+
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(day.isCompleted ? WidgetPalette.accent : WidgetPalette.track)
+                                .frame(width: style.markerSize.width, height: style.markerSize.height)
+                                .overlay {
+                                    if day.isToday && !day.isCompleted {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(WidgetPalette.accent.opacity(0.45), lineWidth: 1.2)
+                                    }
+                                }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
                 }
             }
         }

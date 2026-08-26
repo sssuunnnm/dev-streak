@@ -60,6 +60,7 @@ nonisolated struct GitHubRepositorySummary: Equatable {
     let fullName: String
     let defaultBranch: String
     let isPrivate: Bool
+    let createdAt: Date?
 }
 
 nonisolated struct GitHubPage<Value: Equatable>: Equatable {
@@ -98,7 +99,8 @@ nonisolated struct GitHubAPIClient: GitHubAPIClientProtocol {
         return GitHubRepositorySummary(
             fullName: dto.fullName,
             defaultBranch: dto.defaultBranch,
-            isPrivate: dto.isPrivate
+            isPrivate: dto.isPrivate,
+            createdAt: dto.createdAt.flatMap { dateFormatter.date(from: $0) }
         )
     }
 
@@ -296,11 +298,13 @@ private nonisolated struct GitHubRepositoryDTO: Decodable {
     let fullName: String
     let defaultBranch: String
     let isPrivate: Bool
+    let createdAt: String?
 
     nonisolated enum CodingKeys: String, CodingKey {
         case fullName = "full_name"
         case defaultBranch = "default_branch"
         case isPrivate = "private"
+        case createdAt = "created_at"
     }
 }
 

@@ -15,9 +15,9 @@ enum DailyRecordStatus: String, Codable, CaseIterable {
 
     var isCompleted: Bool {
         switch self {
-        case .pending:
+        case .pending, .manualCompleted:
             false
-        case .manualCompleted, .githubVerified:
+        case .githubVerified:
             true
         }
     }

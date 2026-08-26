@@ -276,17 +276,18 @@ private struct ReminderPreferenceRow: View {
             Image(systemName: slot.iconName)
                 .font(.system(size: 16, weight: .medium))
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(slot.tint)
+                .foregroundStyle(rowTint)
                 .frame(width: 22)
 
             Text(slot.title)
                 .font(DesignTokens.Typography.headline)
-                .foregroundStyle(DesignTokens.Color.primaryText)
+                .foregroundStyle(rowTitleColor)
 
             DatePicker("", selection: $selectedDate, displayedComponents: .hourAndMinute)
                 .labelsHidden()
                 .disabled(!isEnabled)
                 .frame(width: 104, alignment: .leading)
+                .opacity(isEnabled ? 1 : 0.42)
                 .accessibilityLabel("\(slot.title) 시간")
 
             Spacer(minLength: 8)
@@ -296,6 +297,14 @@ private struct ReminderPreferenceRow: View {
         }
         .padding(.vertical, 6)
         .font(DesignTokens.Typography.body)
+    }
+
+    private var rowTint: Color {
+        slot.tint.opacity(isEnabled ? 1 : 0.38)
+    }
+
+    private var rowTitleColor: Color {
+        isEnabled ? DesignTokens.Color.primaryText : DesignTokens.Color.textSecondary.opacity(0.55)
     }
 }
 

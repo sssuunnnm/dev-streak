@@ -11,7 +11,7 @@ import Testing
 
 @MainActor
 struct HabitCalendarServiceTests {
-    @Test func completedStatusIncludesManualCompletedAndGitHubVerified() {
+    @Test func completedStatusRequiresGitHubVerified() {
         let service = Self.service
         let now = Self.noon("2026-08-21")
         let records = [
@@ -19,7 +19,7 @@ struct HabitCalendarServiceTests {
             Self.record("2026-08-21", status: .githubVerified)
         ]
 
-        #expect(service.status(for: "2026-08-20", records: records, now: now) == .completed)
+        #expect(service.status(for: "2026-08-20", records: records, now: now) == .missed)
         #expect(service.status(for: "2026-08-21", records: records, now: now) == .completed)
     }
 
@@ -28,6 +28,25 @@ struct HabitCalendarServiceTests {
         let now = Self.noon("2026-08-21")
 
         #expect(service.status(for: "2026-08-20", records: [], now: now) == .missed)
+    }
+
+    @Test func daysBeforeTrackingStartAreUntracked() {
+        let service = Self.service
+        let now = Self.noon("2026-08-21")
+        let trackingStartDate = Self.noon("2026-08-10")
+
+        #expect(service.status(
+            for: "2026-08-09",
+            records: [],
+            now: now,
+            trackingStartDate: trackingStartDate
+        ) == .untracked)
+        #expect(service.status(
+            for: "2026-08-10",
+            records: [],
+            now: now,
+            trackingStartDate: trackingStartDate
+        ) == .missed)
     }
 
     @Test func todayIncompleteDayIsPendingNotMissed() {
@@ -95,6 +114,23 @@ struct HabitCalendarServiceTests {
         #expect(rate.rate == 1)
     }
 
+    @Test func untrackedDatesAreExcludedFromMonthlyCompletionRate() {
+        let service = Self.service
+        let now = Self.noon("2026-08-12")
+        let trackingStartDate = Self.noon("2026-08-10")
+        let records = [Self.record("2026-08-10")]
+        let rate = service.monthlyCompletionRate(
+            containing: now,
+            records: records,
+            now: now,
+            trackingStartDate: trackingStartDate
+        )
+
+        #expect(rate.completedDays == 1)
+        #expect(rate.eligibleDays == 2)
+        #expect(rate.rate == 0.5)
+    }
+
     @Test func futureCompletedRecordsAreExcludedFromMonthlyCompletionRate() {
         let service = Self.service
         let now = Self.noon("2026-08-02")
@@ -133,7 +169,7 @@ struct HabitCalendarServiceTests {
         return calendar
     }
 
-    private static func record(_ dateKey: String, status: DailyRecordStatus = .manualCompleted) -> DailyRecord {
+    private static func record(_ dateKey: String, status: DailyRecordStatus = .githubVerified) -> DailyRecord {
         DailyRecord(dateKey: dateKey, status: status, completedAt: noon(dateKey), createdAt: noon(dateKey))
     }
 

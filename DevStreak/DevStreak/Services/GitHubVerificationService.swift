@@ -64,7 +64,9 @@ nonisolated struct GitHubVerificationBudgetPolicy {
 nonisolated enum GitHubVerificationDefaults {
     static let dashboardLookbackDays = 7
     static let backfillLookbackDays = 30
+    static let initialBackfillLookbackDays = 365 * 3
     static let authenticatedBackfillRequestLimit = 240
+    static let authenticatedInitialBackfillRequestLimit = 1_000
 }
 
 nonisolated enum GitHubRepositoryConfiguration {
@@ -95,7 +97,7 @@ nonisolated struct GitHubVerificationService {
     private let owner: String
     private let repository: String
     private let mainRef: String
-    private let lookbackDays: Int
+    private let lookbackDays: Int?
     private let commitListLimit: Int
     private let pullRequestLimit: Int
     private let maxRequestsPerVerification: Int?
@@ -110,7 +112,7 @@ nonisolated struct GitHubVerificationService {
         owner: String = GitHubRepositoryConfiguration.owner,
         repository: String = GitHubRepositoryConfiguration.name,
         mainRef: String = GitHubRepositoryConfiguration.mainRef,
-        lookbackDays: Int = GitHubVerificationDefaults.dashboardLookbackDays,
+        lookbackDays: Int? = GitHubVerificationDefaults.dashboardLookbackDays,
         commitListLimit: Int = 30,
         pullRequestLimit: Int = 20,
         maxRequestsPerVerification: Int? = nil,
@@ -184,7 +186,13 @@ nonisolated struct GitHubVerificationService {
         }
 
         let dedupedCandidates = deduplicated(candidates)
-            .filter { $0.timestamp >= since }
+            .filter { candidate in
+                guard let since else {
+                    return true
+                }
+
+                return candidate.timestamp >= since
+            }
 
         var verifiedDateKeys = Set<String>()
 
@@ -243,7 +251,7 @@ nonisolated struct GitHubVerificationService {
     }
 
     private func pagedCommits(
-        since: Date,
+        since: Date?,
         budget: inout GitHubVerificationBudget,
         fetch: (Int) async throws -> GitHubPage<GitHubCommitSummary>
     ) async throws -> [GitHubCommitSummary] {
@@ -253,10 +261,14 @@ nonisolated struct GitHubVerificationService {
         while true {
             try budget.consume()
             let page = try await fetch(pageNumber)
-            commits += page.values.filter { $0.timestamp >= since }
+            if let since {
+                commits += page.values.filter { $0.timestamp >= since }
 
-            if page.values.contains(where: { $0.timestamp < since }) {
-                return commits
+                if page.values.contains(where: { $0.timestamp < since }) {
+                    return commits
+                }
+            } else {
+                commits += page.values
             }
 
             guard page.hasNextPage else {
@@ -283,7 +295,11 @@ nonisolated struct GitHubVerificationService {
         return containsContentPath
     }
 
-    private func verificationStartDate(now: Date) -> Date {
+    private func verificationStartDate(now: Date) -> Date? {
+        guard let lookbackDays else {
+            return nil
+        }
+
         let todayKey = dateService.todayKey(now: now)
         guard let startKey = dateService.addingDays(-lookbackDays, to: todayKey),
               let startDate = dateService.date(from: startKey) else {
@@ -316,6 +332,7 @@ nonisolated struct GitHubVerificationService {
 nonisolated enum GitHubBackfillFailure: Error, Equatable {
     case verification(GitHubVerificationFailure)
     case saveFailed
+    case cancelled
 }
 
 nonisolated struct GitHubBackfillResult: Equatable {
@@ -340,14 +357,16 @@ struct GitHubBackfillService {
         dateService: DateService? = nil,
         dailyRecordUpdater: GitHubDailyRecordUpdater? = nil,
         widgetSnapshotService: WidgetSnapshotService? = nil,
-        reminderNotificationService: ReminderNotificationService? = nil
+        reminderNotificationService: ReminderNotificationService? = nil,
+        lookbackDays: Int? = GitHubVerificationDefaults.backfillLookbackDays,
+        authenticatedRequestLimit: Int = GitHubVerificationDefaults.authenticatedBackfillRequestLimit
     ) {
         let resolvedDateService = dateService ?? DateService()
         let verificationService = verificationService ?? GitHubVerificationService(
             dateService: resolvedDateService,
-            lookbackDays: GitHubVerificationDefaults.backfillLookbackDays,
+            lookbackDays: lookbackDays,
             budgetPolicy: GitHubVerificationBudgetPolicy(
-                authenticatedRequestLimit: GitHubVerificationDefaults.authenticatedBackfillRequestLimit
+                authenticatedRequestLimit: authenticatedRequestLimit
             )
         )
         let dailyRecordUpdater = dailyRecordUpdater ?? GitHubDailyRecordUpdater()
@@ -390,6 +409,10 @@ struct GitHubBackfillService {
         now: Date = .now
     ) async -> Result<GitHubBackfillResult, GitHubBackfillFailure> {
         let verificationResult = await verify(now)
+
+        guard !Task.isCancelled else {
+            return .failure(.cancelled)
+        }
 
         switch verificationResult {
         case .failure(let failure):

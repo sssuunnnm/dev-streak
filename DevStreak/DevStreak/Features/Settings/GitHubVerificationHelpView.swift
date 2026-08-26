@@ -14,6 +14,8 @@ struct GitHubVerificationHelpView: View {
         "GitHub Settings > Developer settings > Personal access tokens > Fine-grained tokens에서 새 token을 만듭니다.",
         "Repository access는 확인할 저장소만 선택합니다.",
         "Repository permissions는 Contents: Read-only, Pull requests: Read-only만 허용하면 됩니다.",
+        "브랜치는 token에서 정하지 않습니다. 현재 앱은 main 브랜치와 열려 있는 Pull Request commit을 확인합니다.",
+        "최초 연결 시 최근 3년의 기록만 한 번 동기화합니다.",
         "생성한 token을 복사해 GitHub 연결 설정에 저장합니다.",
         "token은 Keychain에만 저장되고 GitHub API Authorization header에만 사용됩니다.",
         "DevStreak는 저장소를 수정하거나 commit, PR을 생성하지 않습니다.",

@@ -13,13 +13,8 @@ struct GitHubConnectionSettingsView: View {
     @Query(sort: \DailyRecord.dateKey, order: .reverse) private var records: [DailyRecord]
     @Query(sort: \Idea.updatedAt, order: .reverse) private var ideas: [Idea]
 
-    private let credentialStore = GitHubCredentialStore()
-    private let backfillService = GitHubBackfillService()
-
+    @StateObject private var coordinator = GitHubConnectionCoordinator()
     @State private var token = ""
-    @State private var hasSavedToken = false
-    @State private var connectionState = GitHubConnectionState.idle
-    @State private var backfillState = GitHubBackfillViewState.idle
     @State private var isBackfillConfirmationPresented = false
 
     var body: some View {
@@ -30,13 +25,13 @@ struct GitHubConnectionSettingsView: View {
                         Image(systemName: "checkmark.seal")
                             .font(.system(size: 16, weight: .medium))
                             .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(connectionState.tint)
+                            .foregroundStyle(coordinator.connectionState.tint)
 
                         Text("GitHub 연결")
                             .font(DesignTokens.Typography.headline)
                     }
 
-                    Text(connectionState.message(hasSavedToken: hasSavedToken))
+                    Text(coordinator.connectionState.message(hasSavedToken: coordinator.hasSavedToken))
                         .font(DesignTokens.Typography.subheadline)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                 }
@@ -44,7 +39,7 @@ struct GitHubConnectionSettingsView: View {
             }
 
             Section {
-                if hasSavedToken {
+                if coordinator.hasSavedToken {
                     Label("토큰이 Keychain에 저장되어 있습니다.", systemImage: "key.fill")
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                 } else {
@@ -53,19 +48,25 @@ struct GitHubConnectionSettingsView: View {
                         .autocorrectionDisabled()
 
                     Button("토큰 저장") {
-                        saveToken()
+                        coordinator.saveToken(
+                            token,
+                            records: records,
+                            ideas: ideas,
+                            modelContext: modelContext
+                        )
+                        token = ""
                     }
                     .disabled(token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
 
                 Button("연결 테스트") {
-                    testConnection()
+                    coordinator.testConnection()
                 }
-                .disabled(connectionState == .testing)
+                .disabled(coordinator.connectionState == .testing)
 
-                if hasSavedToken {
+                if coordinator.hasSavedToken {
                     Button("토큰 삭제", role: .destructive) {
-                        deleteToken()
+                        coordinator.deleteToken(records: records, ideas: ideas, modelContext: modelContext)
                     }
                 }
             } footer: {
@@ -78,7 +79,7 @@ struct GitHubConnectionSettingsView: View {
                         .font(DesignTokens.Typography.headline)
                         .foregroundStyle(DesignTokens.Color.primaryText)
 
-                    Text("최근 GitHub 기록을 캘린더에 반영합니다.")
+                    Text("GitHub 기록이 확인된 날짜를 캘린더에 반영합니다.")
                         .font(DesignTokens.Typography.subheadline)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -88,19 +89,26 @@ struct GitHubConnectionSettingsView: View {
                 Button("최근 30일 동기화") {
                     isBackfillConfirmationPresented = true
                 }
-                .disabled(backfillState == .syncing)
+                .disabled(coordinator.backfillState == .syncing)
 
-                if let message = backfillState.message {
+                if let message = coordinator.backfillState.message {
                     Text(message)
                         .font(DesignTokens.Typography.footnote)
-                        .foregroundStyle(backfillState.tint)
+                        .foregroundStyle(coordinator.backfillState.tint)
                 }
+            } footer: {
+                Text("최초 연결 시 최근 3년의 기록을 자동으로 한 번 동기화합니다. 이후 수동 동기화는 최근 30일 범위로 확인합니다.")
             }
         }
         .navigationTitle("GitHub 연결")
         .font(DesignTokens.Typography.body)
         .task {
-            refreshSavedState()
+            coordinator.refreshSavedState()
+            coordinator.runInitialBackfillIfNeeded(
+                records: records,
+                ideas: ideas,
+                modelContext: modelContext
+            )
         }
         .confirmationDialog(
             "최근 30일의 GitHub 기록을 확인할까요?",
@@ -108,203 +116,16 @@ struct GitHubConnectionSettingsView: View {
             titleVisibility: .visible
         ) {
             Button("동기화") {
-                runBackfill()
+                coordinator.runManualBackfill(
+                    records: records,
+                    ideas: ideas,
+                    modelContext: modelContext
+                )
             }
 
             Button("취소", role: .cancel) {}
         } message: {
             Text("GitHub 기록이 확인된 날짜를 완료 기록으로 추가합니다. 기존 기록은 삭제되지 않습니다.")
-        }
-    }
-
-    private func refreshSavedState() {
-        do {
-            hasSavedToken = try credentialStore.hasToken()
-            if !hasSavedToken, connectionState == .idle {
-                connectionState = .needsToken
-            }
-        } catch {
-            hasSavedToken = false
-            connectionState = .failed(.credentialUnavailable)
-        }
-    }
-
-    private func saveToken() {
-        do {
-            try credentialStore.saveToken(token)
-            token = ""
-            hasSavedToken = try credentialStore.hasToken()
-            connectionState = hasSavedToken ? .saved : .needsToken
-        } catch {
-            connectionState = .failed(.credentialUnavailable)
-        }
-    }
-
-    private func deleteToken() {
-        do {
-            try credentialStore.deleteToken()
-            token = ""
-            hasSavedToken = false
-            connectionState = .needsToken
-        } catch {
-            connectionState = .failed(.credentialUnavailable)
-        }
-    }
-
-    private func testConnection() {
-        connectionState = .testing
-
-        Task {
-            let service = GitHubConnectionTestService(client: GitHubAPIClient())
-            let result = await service.testConnection()
-
-            await MainActor.run {
-                switch result {
-                case .success:
-                    connectionState = .connected
-                case .failure(.rateLimited(let diagnostics)):
-                    connectionState = .rateLimited(diagnostics)
-                case .failure(let failure):
-                    connectionState = .failed(failure)
-                }
-
-                refreshSavedState()
-            }
-        }
-    }
-
-    private func runBackfill() {
-        backfillState = .syncing
-
-        Task {
-            let result = await backfillService.backfill(
-                records: records,
-                ideas: ideas,
-                modelContext: modelContext,
-                now: Date()
-            )
-
-            await MainActor.run {
-                switch result {
-                case .success(let backfillResult):
-                    backfillState = backfillResult.changedDayCount > 0
-                        ? .completed(changedDayCount: backfillResult.changedDayCount)
-                        : .completedWithoutChanges
-                case .failure(let failure):
-                    backfillState = .failed(failure)
-                }
-
-                refreshSavedState()
-            }
-        }
-    }
-}
-
-private enum GitHubBackfillViewState: Equatable {
-    case idle
-    case syncing
-    case completed(changedDayCount: Int)
-    case completedWithoutChanges
-    case failed(GitHubBackfillFailure)
-
-    var message: String? {
-        switch self {
-        case .idle:
-            return nil
-        case .syncing:
-            return "GitHub 기록 확인 중..."
-        case .completed(let changedDayCount):
-            return "\(changedDayCount)일의 기록을 동기화했습니다."
-        case .completedWithoutChanges:
-            return "새로 반영할 기록이 없습니다."
-        case .failed(.verification(let failure)):
-            return failure.backfillMessage
-        case .failed(.saveFailed):
-            return "동기화 결과를 저장하지 못했습니다."
-        }
-    }
-
-    var tint: Color {
-        switch self {
-        case .completed, .completedWithoutChanges:
-            return DesignTokens.Color.success
-        case .syncing:
-            return DesignTokens.Color.accent
-        case .idle:
-            return DesignTokens.Color.textSecondary
-        case .failed:
-            return DesignTokens.Color.warning
-        }
-    }
-}
-
-private extension GitHubVerificationFailure {
-    var backfillMessage: String {
-        switch self {
-        case .rateLimited(let diagnostics):
-            if let resetAt = diagnostics?.resetAt {
-                return "\(resetAt.formatted(date: .omitted, time: .shortened)) 이후 다시 확인해 주세요."
-            }
-
-            return "GitHub 요청 한도에 도달했습니다."
-        case .unauthorizedOrForbidden:
-            return "GitHub 연결을 다시 확인해 주세요."
-        case .notFound:
-            return "저장소 접근 권한을 확인해 주세요."
-        case .credentialUnavailable:
-            return "저장된 GitHub 인증 정보를 불러오지 못했습니다."
-        case .networkFailure:
-            return "네트워크 연결을 확인해 주세요."
-        case .budgetExceeded:
-            return "GitHub 기록이 많아 동기화를 완료하지 못했습니다."
-        case .decodingFailure, .unknown:
-            return "동기화를 완료하지 못했습니다."
-        }
-    }
-}
-
-private enum GitHubConnectionState: Equatable {
-    case idle
-    case needsToken
-    case saved
-    case testing
-    case connected
-    case rateLimited(GitHubRateLimitDiagnostics?)
-    case failed(GitHubConnectionFailure)
-
-    var tint: Color {
-        switch self {
-        case .connected, .saved:
-            return DesignTokens.Color.success
-        case .rateLimited:
-            return DesignTokens.Color.warning
-        case .testing:
-            return DesignTokens.Color.accent
-        case .idle, .needsToken, .failed:
-            return DesignTokens.Color.textSecondary
-        }
-    }
-
-    func message(hasSavedToken: Bool) -> String {
-        switch self {
-        case .idle:
-            return hasSavedToken ? "연결 테스트로 저장소 접근을 확인할 수 있습니다." : "GitHub 연결이 필요합니다."
-        case .needsToken:
-            return "GitHub 연결이 필요합니다."
-        case .saved:
-            return "토큰을 저장했습니다."
-        case .testing:
-            return "연결을 확인하는 중입니다."
-        case .connected:
-            return "저장소에 접근할 수 있습니다."
-        case .rateLimited(let diagnostics):
-            if let resetAt = diagnostics?.resetAt {
-                return "\(resetAt.formatted(date: .omitted, time: .shortened)) 이후 다시 확인해 주세요."
-            }
-
-            return "잠시 후 다시 확인해 주세요."
-        case .failed(let failure):
-            return failure.message
         }
     }
 }

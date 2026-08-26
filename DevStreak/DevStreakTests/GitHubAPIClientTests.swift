@@ -20,7 +20,7 @@ struct GitHubAPIClientTests {
             response: .success(
                 statusCode: 200,
                 headers: [:],
-                body: #"{"full_name":"sssuunnnm/dev-archive","default_branch":"main","private":false}"#
+                body: #"{"full_name":"sssuunnnm/dev-archive","default_branch":"main","private":false,"created_at":"2026-07-15T03:00:00Z"}"#
             ),
             capturedHeaders: LockedHeaders()
         )
@@ -29,6 +29,7 @@ struct GitHubAPIClientTests {
         let result = await service.testConnection()
 
         #expect(try result.get().fullName == "sssuunnnm/dev-archive")
+        #expect(try result.get().createdAt == Self.githubDate("2026-07-15T03:00:00Z"))
     }
 
     @Test func repositoryResponseUsesMinimalDecoding() async throws {
@@ -39,7 +40,7 @@ struct GitHubAPIClientTests {
             response: .success(
                 statusCode: 200,
                 headers: [:],
-                body: #"{"id":123,"name":"dev-archive","full_name":"sssuunnnm/dev-archive","default_branch":"main","private":false,"unused":{"nested":true}}"#
+                body: #"{"id":123,"name":"dev-archive","full_name":"sssuunnnm/dev-archive","default_branch":"main","private":false,"created_at":"2026-07-15T03:00:00Z","unused":{"nested":true}}"#
             ),
             capturedHeaders: LockedHeaders()
         )
@@ -49,6 +50,7 @@ struct GitHubAPIClientTests {
         #expect(repository.fullName == "sssuunnnm/dev-archive")
         #expect(repository.defaultBranch == "main")
         #expect(!repository.isPrivate)
+        #expect(repository.createdAt == Self.githubDate("2026-07-15T03:00:00Z"))
     }
 
     @Test func savedTokenAddsAuthorizationHeaderToRepositoryConnectionTest() async throws {
@@ -317,6 +319,12 @@ struct GitHubAPIClientTests {
         case .failure(let failure):
             #expect(failure == expected)
         }
+    }
+}
+
+private extension GitHubAPIClientTests {
+    static func githubDate(_ string: String) -> Date? {
+        ISO8601DateFormatter().date(from: string)
     }
 }
 

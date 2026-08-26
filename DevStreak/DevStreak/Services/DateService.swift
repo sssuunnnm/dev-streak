@@ -106,6 +106,22 @@ nonisolated struct DateService {
         }
     }
 
+    func startOfMonth(containing date: Date) -> Date? {
+        calendar.dateInterval(of: .month, for: date)?.start
+    }
+
+    func addingMonths(_ months: Int, to date: Date) -> Date? {
+        calendar.date(byAdding: .month, value: months, to: date)
+    }
+
+    func isSameMonth(_ left: Date, _ right: Date) -> Bool {
+        calendar.isDate(left, equalTo: right, toGranularity: .month)
+    }
+
+    func compareMonth(_ left: Date, _ right: Date) -> ComparisonResult {
+        calendar.compare(left, to: right, toGranularity: .month)
+    }
+
     func dayNumber(for dateKey: String) -> Int? {
         guard let date = date(from: dateKey) else {
             return nil

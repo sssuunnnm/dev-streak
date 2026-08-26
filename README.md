@@ -7,7 +7,7 @@ DevStreak는 개인 GitHub 기록 습관을 유지하기 위한 iOS companion ap
 ## What It Does
 
 - 오늘의 기록 상태를 `0 / 1` 또는 `1 / 1`로 표시
-- 수동 완료와 GitHub 활동 검증을 기반으로 Daily Goal 기록
+- GitHub 활동 검증을 기반으로 Daily Goal 기록
 - 현재 연속 기록과 최고 연속 기록 계산
 - 월간 캘린더와 월간 달성률 표시
 - 아침, 저녁, 밤 리마인더 설정 및 14일 rolling local notification 예약
@@ -36,10 +36,9 @@ DevStreak는 다음 원칙을 기준으로 구현되어 있습니다.
 ## Core User Flow
 
 1. Dashboard에서 오늘 기록 상태와 streak를 확인합니다.
-2. 오늘 GitHub 기록을 남겼다면 `오늘 기록 완료`로 수동 완료 처리할 수 있습니다.
-3. DevStreak가 저장된 Fine-grained PAT로 최근 GitHub 콘텐츠 활동을 read-only로 확인합니다.
-4. 글감은 `아이디어 메모`에 저장하고, 필요할 때 Claude prompt로 복사해 넘깁니다.
-5. Widget과 알림은 앱을 열지 않아도 오늘 기록 상태를 계속 상기시킵니다.
+2. DevStreak가 저장된 Fine-grained PAT로 최근 GitHub 콘텐츠 활동을 read-only로 확인합니다.
+3. 글감은 `아이디어 메모`에 저장하고, 필요할 때 Claude prompt로 복사해 넘깁니다.
+4. Widget과 알림은 앱을 열지 않아도 오늘 기록 상태를 계속 상기시킵니다.
 
 ## Features
 
@@ -55,7 +54,7 @@ Dashboard는 앱의 중심 화면입니다.
 - Idea Inbox 대기 개수
 - 이번 달 calendar와 completion rate
 
-수동 완료는 confirmation alert를 거친 뒤에만 저장됩니다. 오늘이 아직 미완료인 상태는 실패로 처리하지 않으며, 어제까지 이어진 streak도 오늘 pending이라는 이유만으로 끊지 않습니다.
+오늘이 아직 미완료인 상태는 실패로 처리하지 않으며, 어제까지 이어진 streak도 오늘 pending이라는 이유만으로 끊지 않습니다.
 
 ### Daily Records
 
@@ -77,7 +76,7 @@ final class DailyRecord {
 - `manualCompleted`
 - `githubVerified`
 
-`manualCompleted` 또는 `githubVerified`는 completed day로 계산됩니다.
+`manualCompleted`는 기존 local 데이터 호환 상태이며, `githubVerified`만 completed day로 계산됩니다.
 
 ### Streak
 
@@ -93,14 +92,17 @@ Current streak는 다음 규칙을 따릅니다.
 
 ### Calendar
 
-`HabitCalendarService`는 날짜를 네 가지 상태로 해석합니다.
+`HabitCalendarService`는 날짜를 다섯 가지 상태로 해석합니다.
 
 - `completed`: 완료 기록이 있는 날짜
 - `missed`: 이미 지난 날짜인데 완료 기록이 없는 날짜
 - `pending`: 오늘이며 아직 완료 기록이 없는 날짜
 - `future`: 오늘보다 미래 날짜
+- `untracked`: GitHub 저장소 생성일 이전 날짜
 
-월간 달성률은 completed와 missed만 분모로 사용합니다. 오늘이 pending이면 월간 달성률 분모에서 제외되며, 오늘 완료 시에만 분자와 분모에 포함됩니다. 미래 날짜는 항상 제외됩니다.
+월간 달성률은 completed와 missed만 분모로 사용합니다. 오늘이 pending이면 월간 달성률 분모에서 제외되며, 오늘 완료 시에만 분자와 분모에 포함됩니다. 미래 날짜와 GitHub 저장소 생성일 이전 날짜는 항상 제외됩니다.
+
+GitHub token이 삭제되면 로컬 검증 기록과 repository metadata를 함께 초기화하고, 달력은 다시 중립 상태로 표시합니다.
 
 ### Reminder Notifications
 
@@ -244,6 +246,7 @@ Dashboard verification:
 - 기본 lookback: 최근 7일
 - main branch commits 조회
 - open Pull Request commits 조회
+- GitHub token에서 branch를 선택하지 않으며, 현재 MVP는 앱 설정값인 `main` 기준으로 확인
 - working branch 직접 등록/검사는 현재 MVP 범위 밖
 - SHA dedupe
 - commit detail 조회
@@ -278,12 +281,13 @@ src/content/snippets/
 
 ### GitHub History Sync
 
-GitHub 설정 화면에는 사용자가 명시적으로 실행하는 `최근 30일 동기화`가 있습니다.
+GitHub 설정 화면에는 최초 연결 후 자동으로 한 번 실행되는 최근 3년 기록 동기화와, 이후 사용자가 명시적으로 다시 실행할 수 있는 `최근 30일 동기화`가 있습니다.
 
 정책:
 
 - Dashboard 일반 refresh의 7일 lookback은 유지
-- 사용자가 직접 실행할 때만 최근 30일 backfill
+- 최초 연결 후 최근 3년 commit history backfill 자동 실행
+- 사용자가 직접 다시 실행할 때도 최근 30일 backfill
 - 기존 기록은 삭제하지 않음
 - 새 기록 추가 또는 기존 기록 승격만 수행
 - 저장 실패 시 rollback
@@ -308,14 +312,17 @@ DevStreak/
 │   │   ├── Dashboard/
 │   │   ├── Ideas/
 │   │   └── Settings/
+│   │       └── GitHubConnectionCoordinator.swift
 │   ├── Services/
 │   │   ├── DateService.swift
+│   │   ├── CalendarMonthRangePolicy.swift
 │   │   ├── StreakService.swift
 │   │   ├── HabitCalendarService.swift
 │   │   ├── ReminderNotificationService.swift
 │   │   ├── GitHubAPIClient.swift
 │   │   ├── GitHubVerificationService.swift
 │   │   ├── GitHubCredentialStore.swift
+│   │   ├── GitHubRepositoryMetadataStore.swift
 │   │   ├── GitHubDailyRecordUpdater.swift
 │   │   ├── IdeaPromptService.swift
 │   │   ├── TagNormalizer.swift
@@ -332,16 +339,6 @@ DevStreak/
 ```
 
 ## Data Flow
-
-### Manual Completion
-
-```text
-Dashboard confirmation
-→ DailyRecord manualCompleted 생성/갱신
-→ ModelContext.save()
-→ WidgetSnapshot refresh
-→ 오늘 reminder cancel
-```
 
 ### GitHub Verification
 

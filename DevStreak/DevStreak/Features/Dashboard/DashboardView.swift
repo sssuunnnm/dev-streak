@@ -23,13 +23,15 @@ struct DashboardView: View {
     private let githubVerificationService = GitHubVerificationService()
     private let githubDailyRecordUpdater = GitHubDailyRecordUpdater()
     private let githubAutoRefreshPolicy = GitHubVerificationAutoRefreshPolicy()
+    private let githubRepositoryMetadataStore = GitHubRepositoryMetadataStore()
 
     @State private var saveErrorMessage: String?
     @State private var githubVerificationState: GitHubVerificationViewState = .idle
     @State private var githubVerificationTask: Task<Void, Never>?
     @State private var lastGitHubAutomaticVerificationAt: Date?
-    @State private var manualCompletionConfirmation = ManualCompletionConfirmationState()
     @State private var isGitHubConnectionSettingsPresented = false
+    @State private var isGitHubCalendarTrackingEnabled = false
+    @State private var repositoryCreatedAt: Date?
 
     private var now: Date {
         Date()
@@ -74,9 +76,6 @@ struct DashboardView: View {
                         bestStreak: bestStreak,
                         completionSource: completionSourceText,
                         verificationState: githubVerificationState,
-                        writeAction: {
-                            manualCompletionConfirmation.request()
-                        },
                         refreshAction: verifyGitHubActivity,
                         connectionAction: {
                             isGitHubConnectionSettingsPresented = true
@@ -90,7 +89,12 @@ struct DashboardView: View {
                     }
                     .buttonStyle(.plain)
 
-                    CalendarMonthView(records: records, now: now)
+                    CalendarMonthView(
+                        records: records,
+                        now: now,
+                        isTrackingEnabled: isGitHubCalendarTrackingEnabled,
+                        repositoryCreatedAt: repositoryCreatedAt
+                    )
 
                     if let saveErrorMessage {
                         Text(saveErrorMessage)
@@ -105,6 +109,7 @@ struct DashboardView: View {
             .toolbar(.hidden, for: .navigationBar)
             .task {
                 refreshWidgetSnapshot()
+                refreshGitHubRepositoryMetadata()
                 refreshGitHubConnectionState()
                 refreshCachedGitHubVerificationState()
                 verifyGitHubActivityIfNeeded(now: Date())
@@ -116,6 +121,7 @@ struct DashboardView: View {
                 }
 
                 refreshWidgetSnapshot()
+                refreshGitHubRepositoryMetadata()
                 refreshGitHubConnectionState()
                 refreshCachedGitHubVerificationState()
                 verifyGitHubActivityIfNeeded(now: Date())
@@ -131,6 +137,7 @@ struct DashboardView: View {
                 isPresented: $isGitHubConnectionSettingsPresented,
                 onDismiss: {
                     refreshGitHubConnectionState()
+                    refreshGitHubRepositoryMetadata()
                     refreshCachedGitHubVerificationState()
                     verifyGitHubActivityIfNeeded(now: Date())
                 }
@@ -139,35 +146,7 @@ struct DashboardView: View {
                     GitHubConnectionSettingsView()
                 }
             }
-            .alert("오늘 기록을 완료했나요?", isPresented: manualCompletionBinding) {
-                Button("완료로 표시") {
-                    manualCompletionConfirmation.confirm {
-                        markTodayCompleted()
-                    }
-                }
-
-                Button("취소", role: .cancel) {
-                    manualCompletionConfirmation.cancel()
-                }
-            } message: {
-                Text("오늘 GitHub 기록을 남겼다면 완료로 표시할 수 있습니다.")
-            }
         }
-    }
-
-    private var manualCompletionBinding: Binding<Bool> {
-        Binding(
-            get: {
-                manualCompletionConfirmation.isPresented
-            },
-            set: { isPresented in
-                if isPresented {
-                    manualCompletionConfirmation.request()
-                } else {
-                    manualCompletionConfirmation.cancel()
-                }
-            }
-        )
     }
 
     private var completionSourceText: String {
@@ -184,38 +163,6 @@ struct DashboardView: View {
         ideas.filter { $0.status == .inbox }.count
     }
 
-    private func markTodayCompleted() {
-        let completionDate = Date()
-        let completionDateKey = dateService.todayKey(now: completionDate)
-        var snapshotRecords = records
-
-        if let record = records.first(where: { $0.dateKey == completionDateKey }) {
-            record.status = .manualCompleted
-            record.completedAt = completionDate
-        } else {
-            let record = DailyRecord(
-                dateKey: completionDateKey,
-                status: .manualCompleted,
-                completedAt: completionDate,
-                createdAt: completionDate
-            )
-            modelContext.insert(record)
-            snapshotRecords.append(record)
-        }
-
-        do {
-            try modelContext.save()
-            saveErrorMessage = nil
-            refreshWidgetSnapshot(records: snapshotRecords, now: completionDate)
-
-            Task {
-                await reminderNotificationService.cancelTodayReminders(now: completionDate)
-            }
-        } catch {
-            saveErrorMessage = "오늘 기록을 저장하지 못했습니다."
-        }
-    }
-
     private func syncReminderSchedule() async {
         await reminderNotificationService.syncRollingSchedule(
             settings: reminderSettingsStore.load(),
@@ -230,6 +177,17 @@ struct DashboardView: View {
             ideas: ideas,
             now: now
         )
+    }
+
+    private func refreshGitHubRepositoryMetadata() {
+        switch githubTokenAvailability() {
+        case .available:
+            isGitHubCalendarTrackingEnabled = true
+            repositoryCreatedAt = githubRepositoryMetadataStore.createdAt
+        case .missing, .unavailable:
+            isGitHubCalendarTrackingEnabled = false
+            repositoryCreatedAt = nil
+        }
     }
 
     private func handleDeepLink(_ url: URL) {
@@ -421,7 +379,6 @@ private struct PrimaryGoalCard: View {
     let bestStreak: Int
     let completionSource: String
     let verificationState: GitHubVerificationViewState
-    let writeAction: () -> Void
     let refreshAction: () -> Void
     let connectionAction: () -> Void
 
@@ -432,7 +389,6 @@ private struct PrimaryGoalCard: View {
         bestStreak: Int,
         completionSource: String,
         verificationState: GitHubVerificationViewState,
-        writeAction: @escaping () -> Void,
         refreshAction: @escaping () -> Void,
         connectionAction: @escaping () -> Void
     ) {
@@ -442,7 +398,6 @@ private struct PrimaryGoalCard: View {
         self.bestStreak = bestStreak
         self.completionSource = completionSource
         self.verificationState = verificationState
-        self.writeAction = writeAction
         self.refreshAction = refreshAction
         self.connectionAction = connectionAction
     }
@@ -475,16 +430,9 @@ private struct PrimaryGoalCard: View {
                     .minimumScaleFactor(0.74)
                     .contentTransition(.numericText())
 
-                Text(isCompleted ? completionSource : "짧게라도 하나 남기면 오늘의 기록이 이어집니다.")
+                Text(isCompleted ? completionSource : "GitHub 커밋이 확인되면 오늘 기록이 완료됩니다.")
                     .font(DesignTokens.Typography.subheadline)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
-            }
-
-            if !isCompleted {
-                Button(action: writeAction) {
-                    Label("오늘 기록 완료", systemImage: "checkmark.circle")
-                }
-                .buttonStyle(TactileButtonStyle(tint: DesignTokens.Color.accent))
             }
 
             GitHubVerificationRow(
@@ -553,6 +501,24 @@ private struct GitHubVerificationRow: View {
     }
 
     var body: some View {
+        if state == .needsConnection {
+            GitHubConnectionRequiredCard(
+                connectAction: connectionAction,
+                helpAction: {
+                    isHelpPresented = true
+                }
+            )
+            .sheet(isPresented: $isHelpPresented) {
+                NavigationStack {
+                    GitHubVerificationHelpView()
+                }
+            }
+        } else {
+            compactStatusRow
+        }
+    }
+
+    private var compactStatusRow: some View {
         HStack(spacing: 12) {
             HStack(spacing: 5) {
                 Text(state.message(isTodayCompleted: isTodayCompleted))
@@ -560,11 +526,11 @@ private struct GitHubVerificationRow: View {
                     .foregroundStyle(DesignTokens.Color.textSecondary)
 
                 if let symbolName = state.statusSymbolName {
-                    Image(systemName: symbolName)
-                        .font(.system(size: 10, weight: .medium))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(state.tint)
-                        .verificationStatusSymbolEffect(isChecking: state == .checking)
+                    GitHubVerificationStatusSymbol(
+                        symbolName: symbolName,
+                        tint: state.tint,
+                        isChecking: state == .checking
+                    )
                 }
             }
 
@@ -603,13 +569,90 @@ private struct GitHubVerificationRow: View {
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func verificationStatusSymbolEffect(isChecking: Bool) -> some View {
-        if #available(iOS 18.0, *) {
-            symbolEffect(.rotate, options: .repeating, value: isChecking)
-        } else {
-            self
+private struct GitHubConnectionRequiredCard: View {
+    let connectAction: () -> Void
+    let helpAction: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "link.circle.fill")
+                    .font(.system(size: 24, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(DesignTokens.Color.accent)
+                    .frame(width: 32, height: 32)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("GitHub 연결이 필요합니다")
+                        .font(DesignTokens.Typography.headline)
+                        .foregroundStyle(DesignTokens.Color.primaryText)
+
+                    Text("커밋 기반 기록 확인을 사용하려면 읽기 권한 토큰을 연결해 주세요.")
+                        .font(DesignTokens.Typography.subheadline)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                Button(action: helpAction) {
+                    Image(systemName: "questionmark.circle")
+                        .font(.system(size: 17, weight: .medium))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(DesignTokens.Color.textSecondary)
+                .accessibilityLabel("GitHub 연결 도움말")
+            }
+
+            Button(action: connectAction) {
+                Label("GitHub 연결하기", systemImage: "key")
+            }
+            .buttonStyle(TactileButtonStyle(tint: DesignTokens.Color.accent))
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.72))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(DesignTokens.Color.hairline.opacity(0.55), lineWidth: 0.5)
+                }
+        }
+    }
+}
+
+private struct GitHubVerificationStatusSymbol: View {
+    let symbolName: String
+    let tint: Color
+    let isChecking: Bool
+
+    @State private var rotation = 0.0
+
+    var body: some View {
+        Image(systemName: symbolName)
+            .font(.system(size: 10, weight: .medium))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(tint)
+            .rotationEffect(.degrees(isChecking ? rotation : 0))
+            .onAppear {
+                updateRotation()
+            }
+            .onChange(of: isChecking) { _, _ in
+                updateRotation()
+            }
+    }
+
+    private func updateRotation() {
+        guard isChecking else {
+            rotation = 0
+            return
+        }
+
+        rotation = 0
+        withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
+            rotation = 360
         }
     }
 }

@@ -62,93 +62,99 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    DashboardHeader {
-                        ReminderSettingsView(isTodayCompleted: isTodayCompleted)
-                    }
-
-                    PrimaryGoalCard(
-                        dateKey: todayKey,
-                        isCompleted: isTodayCompleted,
-                        currentStreak: currentStreak,
-                        bestStreak: bestStreak,
-                        completionSource: completionSourceText,
-                        verificationState: githubVerificationState,
-                        refreshAction: verifyGitHubActivity,
-                        connectionAction: {
-                            isGitHubConnectionSettingsPresented = true
+        GeometryReader { proxy in
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 28) {
+                        DashboardHeader {
+                            ReminderSettingsView(isTodayCompleted: isTodayCompleted)
                         }
-                    )
 
-                    NavigationLink {
-                        IdeaInboxView()
-                    } label: {
-                        IdeaInboxSummaryCard(waitingCount: inboxIdeaCount)
+                        PrimaryGoalCard(
+                            dateKey: todayKey,
+                            isCompleted: isTodayCompleted,
+                            currentStreak: currentStreak,
+                            bestStreak: bestStreak,
+                            completionSource: completionSourceText,
+                            verificationState: githubVerificationState,
+                            refreshAction: verifyGitHubActivity,
+                            connectionAction: {
+                                isGitHubConnectionSettingsPresented = true
+                            }
+                        )
+
+                        NavigationLink {
+                            IdeaInboxView()
+                        } label: {
+                            IdeaInboxSummaryCard(waitingCount: inboxIdeaCount)
+                        }
+                        .buttonStyle(.plain)
+
+                        CalendarMonthView(
+                            records: records,
+                            now: now,
+                            isTrackingEnabled: isGitHubCalendarTrackingEnabled,
+                            repositoryCreatedAt: repositoryCreatedAt
+                        )
+
+                        if let saveErrorMessage {
+                            Text(saveErrorMessage)
+                                .font(DesignTokens.Typography.footnote)
+                                .foregroundStyle(.red)
+                        }
                     }
-                    .buttonStyle(.plain)
-
-                    CalendarMonthView(
-                        records: records,
-                        now: now,
-                        isTrackingEnabled: isGitHubCalendarTrackingEnabled,
-                        repositoryCreatedAt: repositoryCreatedAt
-                    )
-
-                    if let saveErrorMessage {
-                        Text(saveErrorMessage)
-                            .font(DesignTokens.Typography.footnote)
-                            .foregroundStyle(.red)
-                    }
+                    .padding(DesignTokens.Spacing.page)
+                    .frame(maxWidth: dashboardContentMaxWidth(for: proxy.size.width), alignment: .leading)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(DesignTokens.Spacing.page)
-                .frame(maxWidth: 520, alignment: .leading)
-                .frame(maxWidth: .infinity)
-            }
-            .font(DesignTokens.Typography.body)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.hidden, for: .navigationBar)
-            .task {
-                refreshWidgetSnapshot()
-                refreshGitHubRepositoryMetadata()
-                refreshGitHubConnectionState()
-                refreshCachedGitHubVerificationState()
-                verifyGitHubActivityIfNeeded(now: Date())
-                await syncReminderSchedule()
-            }
-            .onChange(of: scenePhase) { _, newPhase in
-                guard newPhase == .active else {
-                    return
-                }
-
-                refreshWidgetSnapshot()
-                refreshGitHubRepositoryMetadata()
-                refreshGitHubConnectionState()
-                refreshCachedGitHubVerificationState()
-                verifyGitHubActivityIfNeeded(now: Date())
-
-                Task {
-                    await syncReminderSchedule()
-                }
-            }
-            .onOpenURL { url in
-                handleDeepLink(url)
-            }
-            .sheet(
-                isPresented: $isGitHubConnectionSettingsPresented,
-                onDismiss: {
-                    refreshGitHubConnectionState()
+                .font(DesignTokens.Typography.body)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar(.hidden, for: .navigationBar)
+                .task {
+                    refreshWidgetSnapshot()
                     refreshGitHubRepositoryMetadata()
+                    refreshGitHubConnectionState()
                     refreshCachedGitHubVerificationState()
                     verifyGitHubActivityIfNeeded(now: Date())
+                    await syncReminderSchedule()
                 }
-            ) {
-                NavigationStack {
-                    GitHubConnectionSettingsView()
+                .onChange(of: scenePhase) { _, newPhase in
+                    guard newPhase == .active else {
+                        return
+                    }
+
+                    refreshWidgetSnapshot()
+                    refreshGitHubRepositoryMetadata()
+                    refreshGitHubConnectionState()
+                    refreshCachedGitHubVerificationState()
+                    verifyGitHubActivityIfNeeded(now: Date())
+
+                    Task {
+                        await syncReminderSchedule()
+                    }
+                }
+                .onOpenURL { url in
+                    handleDeepLink(url)
+                }
+                .sheet(
+                    isPresented: $isGitHubConnectionSettingsPresented,
+                    onDismiss: {
+                        refreshGitHubConnectionState()
+                        refreshGitHubRepositoryMetadata()
+                        refreshCachedGitHubVerificationState()
+                        verifyGitHubActivityIfNeeded(now: Date())
+                    }
+                ) {
+                    NavigationStack {
+                        GitHubConnectionSettingsView()
+                    }
                 }
             }
         }
+    }
+
+    private func dashboardContentMaxWidth(for availableWidth: CGFloat) -> CGFloat {
+        availableWidth >= 900 ? 720 : 520
     }
 
     private var completionSourceText: String {

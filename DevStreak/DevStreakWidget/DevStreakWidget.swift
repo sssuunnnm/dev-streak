@@ -145,7 +145,7 @@ private struct DevStreakTodaySmallWidgetView: View {
                     .lineLimit(1)
             }
 
-            WidgetTodayStatusMark(isCompleted: entry.displayState.isTodayCompleted, size: 70)
+            WidgetTodayStatusMark(isCompleted: entry.displayState.isTodayCompleted, size: 56)
 
             Spacer(minLength: 0)
 
@@ -209,15 +209,17 @@ private struct WidgetTodayStatusMark: View {
     let isCompleted: Bool
     let size: CGFloat
 
-    private var text: String {
-        isCompleted ? "O" : "X"
+    private var symbolName: String {
+        isCompleted ? "circle" : "xmark"
     }
 
     var body: some View {
-        Text(text)
-            .font(.system(size: size, weight: .bold, design: .rounded))
+        Image(systemName: symbolName)
+            .font(.system(size: size, weight: .bold))
+            .symbolRenderingMode(.hierarchical)
             .foregroundStyle(isCompleted ? WidgetPalette.accent : WidgetPalette.secondaryText)
             .minimumScaleFactor(0.75)
+            .frame(width: size + 8, height: size + 8, alignment: .center)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityLabel(isCompleted ? "오늘 기록 완료" : "오늘 기록 미완료")
     }
@@ -328,11 +330,10 @@ private struct DevStreakTodayAccessoryCircularView: View {
         Gauge(value: entry.displayState.isTodayCompleted ? 1.0 : 0.0, in: 0.0...1.0) {
             Text("오늘 기록")
         } currentValueLabel: {
-            Text(entry.displayState.isTodayCompleted ? "O" : "X")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .minimumScaleFactor(0.8)
-                .frame(height: 24, alignment: .center)
-                .offset(y: 2)
+            Image(systemName: entry.displayState.isTodayCompleted ? "circle" : "xmark")
+                .font(.system(size: 18, weight: .bold))
+                .symbolRenderingMode(.hierarchical)
+                .frame(width: 22, height: 22, alignment: .center)
                 .widgetAccentable()
         } minimumValueLabel: {
             Text("")

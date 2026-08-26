@@ -37,7 +37,7 @@ DevStreak는 GitHub 잔디처럼 눈에 보이는 흐름을 앱 안으로 가져
 3. 인정된 콘텐츠 경로에 변경이 있으면 해당 날짜를 완료 기록으로 반영합니다.
 4. 대시보드, 캘린더, 위젯, 알림이 같은 기록 상태를 기준으로 갱신됩니다.
 
-현재 MVP는 앱에 설정된 하나의 저장소, `main` branch, open Pull Request commit을 기준으로 확인합니다. 사용자 저장소 선택, 다중 저장소 선택, branch/ref 선택은 후속 범위입니다.
+현재 MVP는 앱에 설정된 하나의 저장소, `main` branch, open Pull Request commit을 기준으로 확인합니다. 앱 안에서 사용자가 저장소를 입력하거나 변경하는 기능, 다중 저장소 선택, branch/ref 선택은 후속 범위입니다.
 
 ## Main Features
 

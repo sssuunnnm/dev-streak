@@ -109,18 +109,16 @@ private struct DevStreakSmallWidgetView: View {
                     .lineLimit(1)
             }
 
-            WidgetSmallMetricSlot {
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text("\(entry.displayState.currentStreak)")
-                        .font(WidgetTypography.mediumMetric)
-                        .foregroundStyle(WidgetPalette.primaryText)
-                        .monospacedDigit()
-                        .minimumScaleFactor(0.72)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text("\(entry.displayState.currentStreak)")
+                    .font(WidgetTypography.mediumMetric)
+                    .foregroundStyle(WidgetPalette.primaryText)
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.72)
 
-                    Text("일")
-                        .font(WidgetTypography.captionStrong)
-                        .foregroundStyle(WidgetPalette.primaryText)
-                }
+                Text("일")
+                    .font(WidgetTypography.captionStrong)
+                    .foregroundStyle(WidgetPalette.primaryText)
             }
 
             Spacer(minLength: 0)
@@ -147,28 +145,13 @@ private struct DevStreakTodaySmallWidgetView: View {
                     .lineLimit(1)
             }
 
-            WidgetSmallMetricSlot {
-                WidgetTodayStatusMark(isCompleted: entry.displayState.isTodayCompleted, size: 46)
-            }
+            WidgetTodayStatusMark(isCompleted: entry.displayState.isTodayCompleted, size: 48)
 
             Spacer(minLength: 0)
 
             WidgetIdeaMemoCountView(count: entry.displayState.pendingIdeaCount)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-    }
-}
-
-private struct WidgetSmallMetricSlot<Content: View>: View {
-    private let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .frame(height: 64, alignment: .center)
     }
 }
 

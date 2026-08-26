@@ -23,12 +23,14 @@ struct DashboardView: View {
     private let githubVerificationService = GitHubVerificationService()
     private let githubDailyRecordUpdater = GitHubDailyRecordUpdater()
     private let githubAutoRefreshPolicy = GitHubVerificationAutoRefreshPolicy()
+    private let githubRepositoryMetadataStore = GitHubRepositoryMetadataStore()
 
     @State private var saveErrorMessage: String?
     @State private var githubVerificationState: GitHubVerificationViewState = .idle
     @State private var githubVerificationTask: Task<Void, Never>?
     @State private var lastGitHubAutomaticVerificationAt: Date?
     @State private var isGitHubConnectionSettingsPresented = false
+    @State private var repositoryCreatedAt: Date?
 
     private var now: Date {
         Date()
@@ -86,7 +88,11 @@ struct DashboardView: View {
                     }
                     .buttonStyle(.plain)
 
-                    CalendarMonthView(records: records, now: now)
+                    CalendarMonthView(
+                        records: records,
+                        now: now,
+                        repositoryCreatedAt: repositoryCreatedAt
+                    )
 
                     if let saveErrorMessage {
                         Text(saveErrorMessage)
@@ -101,6 +107,7 @@ struct DashboardView: View {
             .toolbar(.hidden, for: .navigationBar)
             .task {
                 refreshWidgetSnapshot()
+                refreshGitHubRepositoryMetadata()
                 refreshGitHubConnectionState()
                 refreshCachedGitHubVerificationState()
                 verifyGitHubActivityIfNeeded(now: Date())
@@ -112,6 +119,7 @@ struct DashboardView: View {
                 }
 
                 refreshWidgetSnapshot()
+                refreshGitHubRepositoryMetadata()
                 refreshGitHubConnectionState()
                 refreshCachedGitHubVerificationState()
                 verifyGitHubActivityIfNeeded(now: Date())
@@ -127,6 +135,7 @@ struct DashboardView: View {
                 isPresented: $isGitHubConnectionSettingsPresented,
                 onDismiss: {
                     refreshGitHubConnectionState()
+                    refreshGitHubRepositoryMetadata()
                     refreshCachedGitHubVerificationState()
                     verifyGitHubActivityIfNeeded(now: Date())
                 }
@@ -166,6 +175,10 @@ struct DashboardView: View {
             ideas: ideas,
             now: now
         )
+    }
+
+    private func refreshGitHubRepositoryMetadata() {
+        repositoryCreatedAt = githubRepositoryMetadataStore.createdAt
     }
 
     private func handleDeepLink(_ url: URL) {

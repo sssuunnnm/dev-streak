@@ -435,7 +435,8 @@ final class FakeGitHubAPIClient: GitHubAPIClientProtocol {
         return GitHubRepositorySummary(
             fullName: "\(owner)/\(repository)",
             defaultBranch: "main",
-            isPrivate: false
+            isPrivate: false,
+            createdAt: nil
         )
     }
 

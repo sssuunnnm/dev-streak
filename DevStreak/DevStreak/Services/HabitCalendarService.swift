@@ -12,6 +12,7 @@ enum DailyStatus: String, CaseIterable {
     case missed
     case pending
     case future
+    case untracked
 }
 
 struct HabitCalendarDay: Identifiable {
@@ -44,7 +45,12 @@ struct HabitCalendarService {
         self.dateService = dateService
     }
 
-    func days(containing date: Date, records: [DailyRecord], now: Date = .now) -> [HabitCalendarDay] {
+    func days(
+        containing date: Date,
+        records: [DailyRecord],
+        now: Date = .now,
+        trackingStartDate: Date? = nil
+    ) -> [HabitCalendarDay] {
         dateService.monthDateKeys(containing: date).compactMap { dateKey in
             guard let dayNumber = dateService.dayNumber(for: dateKey) else {
                 return nil
@@ -53,12 +59,29 @@ struct HabitCalendarService {
             return HabitCalendarDay(
                 dateKey: dateKey,
                 dayNumber: dayNumber,
-                status: status(for: dateKey, records: records, now: now)
+                status: status(
+                    for: dateKey,
+                    records: records,
+                    now: now,
+                    trackingStartDate: trackingStartDate
+                )
             )
         }
     }
 
-    func status(for dateKey: String, records: [DailyRecord], now: Date = .now) -> DailyStatus {
+    func status(
+        for dateKey: String,
+        records: [DailyRecord],
+        now: Date = .now,
+        trackingStartDate: Date? = nil
+    ) -> DailyStatus {
+        if let trackingStartDate {
+            let trackingStartKey = dateService.dateKey(for: trackingStartDate)
+            if dateService.compare(dateKey, trackingStartKey) == .orderedAscending {
+                return .untracked
+            }
+        }
+
         let todayKey = dateService.todayKey(now: now)
         switch dateService.compare(dateKey, todayKey) {
         case .orderedAscending:
@@ -74,8 +97,18 @@ struct HabitCalendarService {
         }
     }
 
-    func monthlyCompletionRate(containing date: Date, records: [DailyRecord], now: Date = .now) -> MonthlyCompletionRate {
-        let monthDays = days(containing: date, records: records, now: now)
+    func monthlyCompletionRate(
+        containing date: Date,
+        records: [DailyRecord],
+        now: Date = .now,
+        trackingStartDate: Date? = nil
+    ) -> MonthlyCompletionRate {
+        let monthDays = days(
+            containing: date,
+            records: records,
+            now: now,
+            trackingStartDate: trackingStartDate
+        )
 
         let completedDays = monthDays.filter { $0.status == .completed }.count
         let eligibleDays = monthDays.filter { $0.status == .completed || $0.status == .missed }.count

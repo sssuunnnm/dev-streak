@@ -225,7 +225,7 @@ Current Streak = 4
 
 월 단위 작성 기록을 표시한다.
 
-하루의 상태는 다음 네 가지로 해석한다.
+하루의 상태는 다음 다섯 가지로 해석한다.
 
 1. `completed`
 
@@ -249,8 +249,15 @@ Current Streak = 4
 - monthly completion rate 분자/분모에서 항상 제외
 - `missed` 또는 `pending`으로 표시하지 않음
 
+5. `untracked`
+
+- GitHub repository 생성일 이전 날짜
+- 배경 없이 숫자만 약하게 표시
+- monthly completion rate 분자/분모에서 항상 제외
+
 Monthly completion rate rules:
 
+- GitHub repository 생성일 이전 날짜는 분모에서 제외한다.
 - 오늘이 pending이면 오늘은 분모에서 제외한다.
 - 종료된 과거 날짜만 분모로 사용한다.
 - 오늘을 완료하면 오늘을 분자와 분모에 포함한다.
@@ -579,6 +586,7 @@ DevStreak/
 │   │   ├── GitHubAPIClient.swift
 │   │   ├── GitHubVerificationService.swift
 │   │   ├── GitHubCredentialStore.swift
+│   │   ├── GitHubRepositoryMetadataStore.swift
 │   │   ├── GitHubDailyRecordUpdater.swift
 │   │   ├── IdeaPromptService.swift
 │   │   ├── TagNormalizer.swift

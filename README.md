@@ -92,14 +92,15 @@ Current streak는 다음 규칙을 따릅니다.
 
 ### Calendar
 
-`HabitCalendarService`는 날짜를 네 가지 상태로 해석합니다.
+`HabitCalendarService`는 날짜를 다섯 가지 상태로 해석합니다.
 
 - `completed`: 완료 기록이 있는 날짜
 - `missed`: 이미 지난 날짜인데 완료 기록이 없는 날짜
 - `pending`: 오늘이며 아직 완료 기록이 없는 날짜
 - `future`: 오늘보다 미래 날짜
+- `untracked`: GitHub 저장소 생성일 이전 날짜
 
-월간 달성률은 completed와 missed만 분모로 사용합니다. 오늘이 pending이면 월간 달성률 분모에서 제외되며, 오늘 완료 시에만 분자와 분모에 포함됩니다. 미래 날짜는 항상 제외됩니다.
+월간 달성률은 completed와 missed만 분모로 사용합니다. 오늘이 pending이면 월간 달성률 분모에서 제외되며, 오늘 완료 시에만 분자와 분모에 포함됩니다. 미래 날짜와 GitHub 저장소 생성일 이전 날짜는 항상 제외됩니다.
 
 ### Reminder Notifications
 
@@ -317,6 +318,7 @@ DevStreak/
 │   │   ├── GitHubAPIClient.swift
 │   │   ├── GitHubVerificationService.swift
 │   │   ├── GitHubCredentialStore.swift
+│   │   ├── GitHubRepositoryMetadataStore.swift
 │   │   ├── GitHubDailyRecordUpdater.swift
 │   │   ├── IdeaPromptService.swift
 │   │   ├── TagNormalizer.swift

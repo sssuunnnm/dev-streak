@@ -30,6 +30,25 @@ struct HabitCalendarServiceTests {
         #expect(service.status(for: "2026-08-20", records: [], now: now) == .missed)
     }
 
+    @Test func daysBeforeTrackingStartAreUntracked() {
+        let service = Self.service
+        let now = Self.noon("2026-08-21")
+        let trackingStartDate = Self.noon("2026-08-10")
+
+        #expect(service.status(
+            for: "2026-08-09",
+            records: [],
+            now: now,
+            trackingStartDate: trackingStartDate
+        ) == .untracked)
+        #expect(service.status(
+            for: "2026-08-10",
+            records: [],
+            now: now,
+            trackingStartDate: trackingStartDate
+        ) == .missed)
+    }
+
     @Test func todayIncompleteDayIsPendingNotMissed() {
         let service = Self.service
         let now = Self.noon("2026-08-21")
@@ -93,6 +112,23 @@ struct HabitCalendarServiceTests {
         #expect(rate.completedDays == 1)
         #expect(rate.eligibleDays == 1)
         #expect(rate.rate == 1)
+    }
+
+    @Test func untrackedDatesAreExcludedFromMonthlyCompletionRate() {
+        let service = Self.service
+        let now = Self.noon("2026-08-12")
+        let trackingStartDate = Self.noon("2026-08-10")
+        let records = [Self.record("2026-08-10")]
+        let rate = service.monthlyCompletionRate(
+            containing: now,
+            records: records,
+            now: now,
+            trackingStartDate: trackingStartDate
+        )
+
+        #expect(rate.completedDays == 1)
+        #expect(rate.eligibleDays == 2)
+        #expect(rate.rate == 0.5)
     }
 
     @Test func futureCompletedRecordsAreExcludedFromMonthlyCompletionRate() {

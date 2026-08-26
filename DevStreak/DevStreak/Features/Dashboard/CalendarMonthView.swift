@@ -10,6 +10,7 @@ import SwiftUI
 struct CalendarMonthView: View {
     let records: [DailyRecord]
     let now: Date
+    let repositoryCreatedAt: Date?
 
     @State private var visibleMonth: Date
 
@@ -19,18 +20,29 @@ struct CalendarMonthView: View {
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
     private let dayCellHeight: CGFloat = 34
 
-    init(records: [DailyRecord], now: Date) {
+    init(records: [DailyRecord], now: Date, repositoryCreatedAt: Date? = nil) {
         self.records = records
         self.now = now
+        self.repositoryCreatedAt = repositoryCreatedAt
         _visibleMonth = State(initialValue: DateService().startOfMonth(containing: now) ?? now)
     }
 
     private var monthDays: [HabitCalendarDay] {
-        calendarService.days(containing: visibleMonth, records: records, now: now)
+        calendarService.days(
+            containing: visibleMonth,
+            records: records,
+            now: now,
+            trackingStartDate: repositoryCreatedAt
+        )
     }
 
     private var monthlyRate: MonthlyCompletionRate {
-        calendarService.monthlyCompletionRate(containing: visibleMonth, records: records, now: now)
+        calendarService.monthlyCompletionRate(
+            containing: visibleMonth,
+            records: records,
+            now: now,
+            trackingStartDate: repositoryCreatedAt
+        )
     }
 
     private var leadingBlankDayCount: Int {
@@ -45,19 +57,21 @@ struct CalendarMonthView: View {
         let threeYearStart = dateService
             .addingMonths(-36, to: currentMonth)
             .flatMap { dateService.startOfMonth(containing: $0) } ?? currentMonth
+        let repositoryCreatedMonth = repositoryCreatedAt
+            .flatMap { dateService.startOfMonth(containing: $0) }
         let firstCompletedMonth = records
             .filter { $0.status.isCompleted }
             .compactMap { dateService.date(from: $0.dateKey) }
             .min()
             .flatMap { dateService.startOfMonth(containing: $0) }
 
-        guard let firstCompletedMonth else {
+        guard let trackingStartMonth = repositoryCreatedMonth ?? firstCompletedMonth else {
             return currentMonth
         }
 
-        return dateService.compareMonth(firstCompletedMonth, threeYearStart) == .orderedAscending
+        return dateService.compareMonth(trackingStartMonth, threeYearStart) == .orderedAscending
             ? threeYearStart
-            : firstCompletedMonth
+            : trackingStartMonth
     }
 
     private var isCurrentMonthVisible: Bool {
@@ -198,9 +212,7 @@ private struct CalendarDayCell: View {
             DesignTokens.Color.accent.opacity(0.86)
         case .missed:
             DesignTokens.Color.missed.opacity(0.72)
-        case .pending:
-            .clear
-        case .future:
+        case .pending, .future, .untracked:
             .clear
         }
     }
@@ -215,6 +227,8 @@ private struct CalendarDayCell: View {
             DesignTokens.Color.accent
         case .future:
             DesignTokens.Color.textSecondary.opacity(0.45)
+        case .untracked:
+            DesignTokens.Color.textSecondary.opacity(0.30)
         }
     }
 
@@ -226,7 +240,7 @@ private struct CalendarDayCell: View {
             DesignTokens.Color.accent.opacity(0.72)
         case .missed:
             DesignTokens.Color.hairline.opacity(0.70)
-        case .future:
+        case .future, .untracked:
             .clear
         }
     }

@@ -14,6 +14,7 @@ struct GitHubConnectionSettingsView: View {
     @Query(sort: \Idea.updatedAt, order: .reverse) private var ideas: [Idea]
 
     private let credentialStore = GitHubCredentialStore()
+    private let repositoryMetadataStore = GitHubRepositoryMetadataStore()
     private let backfillService = GitHubBackfillService()
     private let initialBackfillService = GitHubBackfillService(
         lookbackDays: GitHubVerificationDefaults.initialBackfillLookbackDays,
@@ -156,6 +157,7 @@ struct GitHubConnectionSettingsView: View {
             hasSavedToken = false
             connectionState = .needsToken
             initialBackfillStore.reset()
+            repositoryMetadataStore.reset()
         } catch {
             connectionState = .failed(.credentialUnavailable)
         }
@@ -170,7 +172,8 @@ struct GitHubConnectionSettingsView: View {
 
             await MainActor.run {
                 switch result {
-                case .success:
+                case .success(let repository):
+                    repositoryMetadataStore.save(createdAt: repository.createdAt)
                     connectionState = .connected
                 case .failure(.rateLimited(let diagnostics)):
                     connectionState = .rateLimited(diagnostics)
@@ -201,6 +204,8 @@ struct GitHubConnectionSettingsView: View {
         backfillState = .syncing
 
         Task {
+            await refreshRepositoryMetadataIfPossible()
+
             let result = await service.backfill(
                 records: records,
                 ideas: ideas,
@@ -225,6 +230,15 @@ struct GitHubConnectionSettingsView: View {
                 refreshSavedState()
             }
         }
+    }
+
+    private func refreshRepositoryMetadataIfPossible() async {
+        let service = GitHubConnectionTestService(client: GitHubAPIClient())
+        guard case .success(let repository) = await service.testConnection() else {
+            return
+        }
+
+        repositoryMetadataStore.save(createdAt: repository.createdAt)
     }
 }
 

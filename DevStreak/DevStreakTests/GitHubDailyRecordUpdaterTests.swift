@@ -220,6 +220,38 @@ struct GitHubDailyRecordUpdaterTests {
         #expect(reminderCancelCount == 0)
     }
 
+    @Test func cancelledBackfillDoesNotPersistVerifiedRecords() async throws {
+        let context = try Self.inMemoryContext()
+        var widgetRefreshCount = 0
+        let service = GitHubBackfillService(
+            verify: { _ in
+                try? await Task.sleep(nanoseconds: 1_000_000)
+                return .success(GitHubVerificationResult(verifiedDateKeys: ["2026-08-22"]))
+            },
+            dateService: DateService(calendar: Self.calendar),
+            updateWidgetSnapshot: { _, _, _ in
+                widgetRefreshCount += 1
+            },
+            cancelTodayReminders: { _ in }
+        )
+
+        let task = Task {
+            await service.backfill(
+                records: [],
+                ideas: [],
+                modelContext: context,
+                now: Self.noon("2026-08-22")
+            )
+        }
+        task.cancel()
+
+        let result = await task.value
+
+        #expect(result == .failure(.cancelled))
+        #expect(try Self.records(in: context).isEmpty)
+        #expect(widgetRefreshCount == 0)
+    }
+
     @Test func backfillVerificationFailureDoesNotRollbackUnrelatedUnsavedChanges() async throws {
         let context = try Self.inMemoryContext()
         let draftIdea = Idea(

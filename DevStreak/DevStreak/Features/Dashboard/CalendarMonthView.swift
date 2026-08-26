@@ -17,6 +17,7 @@ struct CalendarMonthView: View {
 
     private let dateService = DateService()
     private let calendarService = HabitCalendarService()
+    private let monthRangePolicy = CalendarMonthRangePolicy()
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
     private let dayCellHeight: CGFloat = 34
@@ -63,28 +64,12 @@ struct CalendarMonthView: View {
     }
 
     private var earliestVisibleMonth: Date {
-        guard isTrackingEnabled else {
-            return currentMonth
-        }
-
-        let threeYearStart = dateService
-            .addingMonths(-36, to: currentMonth)
-            .flatMap { dateService.startOfMonth(containing: $0) } ?? currentMonth
-        let repositoryCreatedMonth = repositoryCreatedAt
-            .flatMap { dateService.startOfMonth(containing: $0) }
-        let firstCompletedMonth = records
-            .filter { $0.status.isCompleted }
-            .compactMap { dateService.date(from: $0.dateKey) }
-            .min()
-            .flatMap { dateService.startOfMonth(containing: $0) }
-
-        guard let trackingStartMonth = repositoryCreatedMonth ?? firstCompletedMonth else {
-            return currentMonth
-        }
-
-        return dateService.compareMonth(trackingStartMonth, threeYearStart) == .orderedAscending
-            ? threeYearStart
-            : trackingStartMonth
+        monthRangePolicy.earliestVisibleMonth(
+            now: now,
+            records: records,
+            isTrackingEnabled: isTrackingEnabled,
+            repositoryCreatedAt: repositoryCreatedAt
+        )
     }
 
     private var isCurrentMonthVisible: Bool {
@@ -168,6 +153,12 @@ struct CalendarMonthView: View {
         .onChange(of: dateService.dateKey(for: now)) {
             clampVisibleMonth()
         }
+        .onChange(of: isTrackingEnabled) {
+            clampVisibleMonth()
+        }
+        .onChange(of: repositoryCreatedAt) {
+            clampVisibleMonth()
+        }
     }
 
     private func moveMonth(by months: Int) {
@@ -183,17 +174,13 @@ struct CalendarMonthView: View {
     }
 
     private func clampedMonth(_ month: Date) -> Date {
-        let normalizedMonth = dateService.startOfMonth(containing: month) ?? month
-
-        if dateService.compareMonth(normalizedMonth, currentMonth) == .orderedDescending {
-            return currentMonth
-        }
-
-        if dateService.compareMonth(normalizedMonth, earliestVisibleMonth) == .orderedAscending {
-            return earliestVisibleMonth
-        }
-
-        return normalizedMonth
+        monthRangePolicy.clampedMonth(
+            month,
+            now: now,
+            records: records,
+            isTrackingEnabled: isTrackingEnabled,
+            repositoryCreatedAt: repositoryCreatedAt
+        )
     }
 }
 

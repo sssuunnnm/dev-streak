@@ -312,8 +312,10 @@ DevStreak/
 │   │   ├── Dashboard/
 │   │   ├── Ideas/
 │   │   └── Settings/
+│   │       └── GitHubConnectionCoordinator.swift
 │   ├── Services/
 │   │   ├── DateService.swift
+│   │   ├── CalendarMonthRangePolicy.swift
 │   │   ├── StreakService.swift
 │   │   ├── HabitCalendarService.swift
 │   │   ├── ReminderNotificationService.swift

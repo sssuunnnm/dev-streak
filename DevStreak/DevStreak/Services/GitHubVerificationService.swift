@@ -332,6 +332,7 @@ nonisolated struct GitHubVerificationService {
 nonisolated enum GitHubBackfillFailure: Error, Equatable {
     case verification(GitHubVerificationFailure)
     case saveFailed
+    case cancelled
 }
 
 nonisolated struct GitHubBackfillResult: Equatable {
@@ -408,6 +409,10 @@ struct GitHubBackfillService {
         now: Date = .now
     ) async -> Result<GitHubBackfillResult, GitHubBackfillFailure> {
         let verificationResult = await verify(now)
+
+        guard !Task.isCancelled else {
+            return .failure(.cancelled)
+        }
 
         switch verificationResult {
         case .failure(let failure):

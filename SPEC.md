@@ -663,7 +663,16 @@ ReminderSettingsView / app activation
 - Complex interactive widget actions
 - Complex Idea search/filtering
 
-## 17. Testing Expectations
+## 17. Known Follow-up Issues
+
+배포 전 차단 이슈는 아니지만, 후속 안정화 작업으로 추적한다.
+
+- Initial backfill resume: 최근 3년 초기 동기화가 API request budget을 초과하면 다음 시도도 처음부터 다시 시작한다. pagination 진행 위치 저장 또는 기간 단위 분할 저장이 필요하다.
+- Dashboard GitHub verification coordinator: Dashboard의 자동 verification 상태 전이와 side effect 일부가 아직 `DashboardView`에 남아 있다. Settings 쪽처럼 coordinator/view model로 분리하면 테스트와 유지보수가 쉬워진다.
+- GitHub branch selection: 현재 MVP는 `main` branch와 open PR commit만 확인한다. 사용자가 branch/ref를 선택하는 UI는 후속 범위다.
+- Repository scope expansion: 현재 MVP는 `sssuunnnm/dev-archive` 단일 repository만 지원한다. 다중 repository 선택은 후속 범위다.
+
+## 18. Testing Expectations
 
 테스트는 Swift Testing과 XCTest UI Tests로 구성한다.
 

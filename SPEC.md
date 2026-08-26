@@ -418,10 +418,10 @@ Widget 표시 정보:
 
 - Today completion status
 - Current streak
-- Home Screen widget은 current streak 중심 위젯과 Today completion 중심 위젯을 제공한다.
+- Home Screen widget은 current streak 중심 위젯을 제공한다.
 - Home Screen small streak widget은 current streak와 pending idea memo count를 표시한다.
 - Home Screen medium widget은 최근 7일 완료 상태를 함께 표시한다.
-- Today completion widget은 Home Screen small과 Lock Screen accessory circular family만 지원하며 `O` 또는 `X`로 완료 여부를 표시한다.
+- Today completion widget은 Lock Screen accessory circular family만 지원하며 완료 여부를 표시한다.
 - Lock Screen accessory circular widget은 current streak 중심 위젯과 Today completion 중심 위젯을 제공한다.
 - Write shortcut / dashboard deep link
 - 지원 family에 따라 pending idea count 등 최소 snapshot 정보

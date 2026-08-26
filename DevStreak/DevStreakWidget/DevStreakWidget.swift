@@ -80,12 +80,7 @@ private struct DevStreakWidgetEntryView: View {
             case .accessoryInline:
                 DevStreakAccessoryInlineView(entry: entry)
             default:
-                switch mode {
-                case .streak:
-                    DevStreakSmallWidgetView(entry: entry)
-                case .today:
-                    DevStreakTodaySmallWidgetView(entry: entry)
-                }
+                DevStreakSmallWidgetView(entry: entry)
             }
         }
         .containerBackground(.background, for: .widget)
@@ -120,32 +115,6 @@ private struct DevStreakSmallWidgetView: View {
                     .font(WidgetTypography.captionStrong)
                     .foregroundStyle(WidgetPalette.primaryText)
             }
-
-            Spacer(minLength: 0)
-
-            WidgetIdeaMemoCountView(count: entry.displayState.pendingIdeaCount)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-    }
-}
-
-private struct DevStreakTodaySmallWidgetView: View {
-    let entry: DevStreakWidgetEntry
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("DevStreak")
-                    .font(WidgetTypography.captionStrong)
-                    .foregroundStyle(WidgetPalette.primaryText)
-
-                Text("오늘 기록")
-                    .font(WidgetTypography.captionStrong)
-                    .foregroundStyle(WidgetPalette.secondaryText)
-                    .lineLimit(1)
-            }
-
-            WidgetTodayStatusMark(isCompleted: entry.displayState.isTodayCompleted, size: 48, yOffset: 18)
 
             Spacer(minLength: 0)
 
@@ -202,28 +171,6 @@ private struct WidgetIdeaMemoCountView: View {
                 .minimumScaleFactor(0.82)
         }
         .foregroundStyle(WidgetPalette.secondaryText)
-    }
-}
-
-private struct WidgetTodayStatusMark: View {
-    let isCompleted: Bool
-    let size: CGFloat
-    var yOffset: CGFloat = 0
-
-    private var symbolName: String {
-        isCompleted ? "circle" : "xmark"
-    }
-
-    var body: some View {
-        Image(systemName: symbolName)
-            .font(.system(size: size, weight: .bold))
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(isCompleted ? WidgetPalette.accent : WidgetPalette.secondaryText)
-            .minimumScaleFactor(0.75)
-            .frame(width: size + 8, height: size + 8, alignment: .center)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .offset(y: yOffset)
-            .accessibilityLabel(isCompleted ? "오늘 기록 완료" : "오늘 기록 미완료")
     }
 }
 
@@ -413,7 +360,7 @@ struct DevStreakTodayWidget: Widget {
         }
         .configurationDisplayName("DevStreak 오늘 기록")
         .description("오늘 기록 달성 여부를 보여줍니다.")
-        .supportedFamilies([.systemSmall, .accessoryCircular])
+        .supportedFamilies([.accessoryCircular])
     }
 }
 
@@ -472,12 +419,6 @@ private extension WidgetRecentDay {
 
 #Preview("Small", as: .systemSmall) {
     DevStreakWidget()
-} timeline: {
-    DevStreakWidgetEntry.preview
-}
-
-#Preview("Small Today", as: .systemSmall) {
-    DevStreakTodayWidget()
 } timeline: {
     DevStreakWidgetEntry.preview
 }

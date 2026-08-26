@@ -145,9 +145,7 @@ Claude로 넘기는 행위만으로 Idea를 used 처리하지 않는다. 사용�
 
 ### Completion
 
-사용자는 "오늘 기록 완료" action으로 수동 완료를 기록할 수 있다.
-
-GitHub verification이 콘텐츠 경로 변경을 확인하면 해당 날짜의 DailyRecord를 `githubVerified`로 생성하거나 승격한다.
+GitHub verification이 콘텐츠 경로 변경 commit을 확인하면 해당 날짜의 DailyRecord를 `githubVerified`로 생성하거나 승격한다.
 
 ## 5. Dashboard
 
@@ -160,12 +158,9 @@ Dashboard는 앱 실행 시 가장 먼저 표시되는 중심 화면이다.
 - 현재 streak
 - best streak
 - GitHub verification 상태
-- 오늘 기록 완료 action
 - Idea Inbox shortcut 및 대기 개수
 - 이번 달 calendar
 - 월간 completion rate
-
-수동 완료는 confirmation alert를 거친 뒤 저장한다.
 
 오늘이 아직 미완료인 상태는 missed로 처리하지 않으며, 오늘 pending이라는 이유만으로 어제까지 이어진 streak를 끊지 않는다.
 
@@ -195,14 +190,13 @@ DailyRecord status:
 
 Completed day로 계산되는 상태:
 
-- `manualCompleted`
 - `githubVerified`
 
-`manualCompleted`는 사용자가 직접 작성 완료를 기록한 상태이다.
+`manualCompleted`는 이전 버전 또는 기존 local 데이터 호환을 위한 직접 완료 상태이다.
 
 `githubVerified`는 GitHub verification이 실제 콘텐츠 경로 변경 commit을 확인한 상태이다.
 
-수동 완료 후 GitHub activity가 나중에 발견된 경우 `manualCompleted`에서 `githubVerified`로 승격할 수 있다.
+기존 local 데이터에 `manualCompleted`가 있으면 GitHub activity가 나중에 발견된 경우 `githubVerified`로 승격할 수 있다.
 
 ## 7. Streak
 
@@ -236,7 +230,7 @@ Current Streak = 4
 1. `completed`
 
 - 해당 날짜에 Daily Goal을 완료한 상태
-- `manualCompleted` 또는 `githubVerified` 기록이 존재
+- `githubVerified` 기록이 존재
 - 단, 오늘보다 미래 날짜는 완료 기록이 존재하더라도 `future`로 취급
 
 2. `missed`
@@ -599,16 +593,6 @@ DevStreak/
 ```
 
 ## 15. Data Flow
-
-Manual completion:
-
-```text
-Dashboard confirmation
--> DailyRecord manualCompleted 생성/갱신
--> ModelContext.save()
--> WidgetSnapshot refresh
--> 오늘 reminder cancel
-```
 
 GitHub verification:
 

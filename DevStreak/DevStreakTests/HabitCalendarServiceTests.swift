@@ -11,7 +11,7 @@ import Testing
 
 @MainActor
 struct HabitCalendarServiceTests {
-    @Test func completedStatusIncludesManualCompletedAndGitHubVerified() {
+    @Test func completedStatusRequiresGitHubVerified() {
         let service = Self.service
         let now = Self.noon("2026-08-21")
         let records = [
@@ -19,7 +19,7 @@ struct HabitCalendarServiceTests {
             Self.record("2026-08-21", status: .githubVerified)
         ]
 
-        #expect(service.status(for: "2026-08-20", records: records, now: now) == .completed)
+        #expect(service.status(for: "2026-08-20", records: records, now: now) == .missed)
         #expect(service.status(for: "2026-08-21", records: records, now: now) == .completed)
     }
 
@@ -133,7 +133,7 @@ struct HabitCalendarServiceTests {
         return calendar
     }
 
-    private static func record(_ dateKey: String, status: DailyRecordStatus = .manualCompleted) -> DailyRecord {
+    private static func record(_ dateKey: String, status: DailyRecordStatus = .githubVerified) -> DailyRecord {
         DailyRecord(dateKey: dateKey, status: status, completedAt: noon(dateKey), createdAt: noon(dateKey))
     }
 

@@ -7,7 +7,7 @@ DevStreak는 개인 GitHub 기록 습관을 유지하기 위한 iOS companion ap
 ## What It Does
 
 - 오늘의 기록 상태를 `0 / 1` 또는 `1 / 1`로 표시
-- 수동 완료와 GitHub 활동 검증을 기반으로 Daily Goal 기록
+- GitHub 활동 검증을 기반으로 Daily Goal 기록
 - 현재 연속 기록과 최고 연속 기록 계산
 - 월간 캘린더와 월간 달성률 표시
 - 아침, 저녁, 밤 리마인더 설정 및 14일 rolling local notification 예약
@@ -36,10 +36,9 @@ DevStreak는 다음 원칙을 기준으로 구현되어 있습니다.
 ## Core User Flow
 
 1. Dashboard에서 오늘 기록 상태와 streak를 확인합니다.
-2. 오늘 GitHub 기록을 남겼다면 `오늘 기록 완료`로 수동 완료 처리할 수 있습니다.
-3. DevStreak가 저장된 Fine-grained PAT로 최근 GitHub 콘텐츠 활동을 read-only로 확인합니다.
-4. 글감은 `아이디어 메모`에 저장하고, 필요할 때 Claude prompt로 복사해 넘깁니다.
-5. Widget과 알림은 앱을 열지 않아도 오늘 기록 상태를 계속 상기시킵니다.
+2. DevStreak가 저장된 Fine-grained PAT로 최근 GitHub 콘텐츠 활동을 read-only로 확인합니다.
+3. 글감은 `아이디어 메모`에 저장하고, 필요할 때 Claude prompt로 복사해 넘깁니다.
+4. Widget과 알림은 앱을 열지 않아도 오늘 기록 상태를 계속 상기시킵니다.
 
 ## Features
 
@@ -55,7 +54,7 @@ Dashboard는 앱의 중심 화면입니다.
 - Idea Inbox 대기 개수
 - 이번 달 calendar와 completion rate
 
-수동 완료는 confirmation alert를 거친 뒤에만 저장됩니다. 오늘이 아직 미완료인 상태는 실패로 처리하지 않으며, 어제까지 이어진 streak도 오늘 pending이라는 이유만으로 끊지 않습니다.
+오늘이 아직 미완료인 상태는 실패로 처리하지 않으며, 어제까지 이어진 streak도 오늘 pending이라는 이유만으로 끊지 않습니다.
 
 ### Daily Records
 
@@ -77,7 +76,7 @@ final class DailyRecord {
 - `manualCompleted`
 - `githubVerified`
 
-`manualCompleted` 또는 `githubVerified`는 completed day로 계산됩니다.
+`manualCompleted`는 기존 local 데이터 호환 상태이며, `githubVerified`만 completed day로 계산됩니다.
 
 ### Streak
 
@@ -332,16 +331,6 @@ DevStreak/
 ```
 
 ## Data Flow
-
-### Manual Completion
-
-```text
-Dashboard confirmation
-→ DailyRecord manualCompleted 생성/갱신
-→ ModelContext.save()
-→ WidgetSnapshot refresh
-→ 오늘 reminder cancel
-```
 
 ### GitHub Verification
 

@@ -28,7 +28,7 @@ struct IdeaModelTests {
         let container = try ModelContainer(for: schema, configurations: [configuration])
         let context = ModelContext(container)
 
-        context.insert(DailyRecord(dateKey: "2026-08-22", status: .manualCompleted))
+        context.insert(DailyRecord(dateKey: "2026-08-22", status: .githubVerified))
         context.insert(Idea(title: "Schema idea", tags: ["swift"]))
 
         try context.save()

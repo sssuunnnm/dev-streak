@@ -76,7 +76,7 @@ struct WidgetSnapshotServiceTests {
         return calendar
     }
 
-    private static func record(_ dateKey: String, status: DailyRecordStatus = .manualCompleted) -> DailyRecord {
+    private static func record(_ dateKey: String, status: DailyRecordStatus = .githubVerified) -> DailyRecord {
         DailyRecord(dateKey: dateKey, status: status, completedAt: noon(dateKey), createdAt: noon(dateKey))
     }
 

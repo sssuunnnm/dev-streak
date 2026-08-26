@@ -8,6 +8,32 @@ Last updated: 2026-08-26
 - Build: 새 TestFlight 빌드 업로드 후 선택
 - Release option: 수동으로 버전 출시
 
+## App Information
+
+- Platform: iOS
+- Name: `DevStreak`
+- Subtitle: `GitHub 기록 습관 관리`
+- Primary language: 한국어
+- Bundle ID: `com.sssuunnnm.DevStreakApp`
+- SKU: `devstreak-ios-1`
+- Privacy Policy URL: `https://sssuunnnm.notion.site/DevStreak-Privacy-Policy-3c70f65e84d680c0a1e0e02425ccc7d2`
+- Category: 개발자 도구
+- Secondary Category: 생산성
+- Content Rights: 앱이 GitHub 기록에 접근하므로, 질문이 "타사 콘텐츠를 포함, 표시 또는 접근하는가"라면 `예`를 선택하고 사용자가 직접 연결한 GitHub 토큰의 읽기 권한으로 접근한다고 본다.
+
+## Age Rating
+
+권장 응답:
+
+- Made for Kids: No
+- 앱 내 도박 또는 콘테스트: 없음
+- 폭력, 성적 콘텐츠, 의료/치료 정보, 약물/주류/담배, 혐오 표현: 없음
+- 사용자 생성 콘텐츠: 없음
+- 무제한 웹 접근: 없음
+- 위치 정보 접근: 없음
+
+예상 등급: `4+`
+
 ## Preview And Screenshots
 
 PNG 이미지는 App Store Connect의 "앱 미리보기"가 아니라 "스크린샷" 슬롯에 업로드한다. 앱 미리보기는 동영상 슬롯이다.
@@ -20,6 +46,10 @@ PNG 이미지는 App Store Connect의 "앱 미리보기"가 아니라 "스크린
 4. `docs/app-store/previews/Preview-4.png`
 
 첫 3장이 앱 설치 시트에 우선 표시된다.
+
+13 iPad 디스플레이 스크린샷:
+
+- 필요. iPad 지원을 끄지 않는다면 App Store Connect에 별도 업로드해야 한다.
 
 ## Promotional Text
 
@@ -91,6 +121,7 @@ GitHub 연결은 사용자가 직접 발급한 fine-grained personal access toke
 
 ## App Privacy Summary
 
+- App Store Connect answer: `No, we do not collect data from this app`
 - Developer data collection: 없음
 - Daily records: 기기 내 SwiftData 저장
 - Idea memos: 기기 내 SwiftData 저장

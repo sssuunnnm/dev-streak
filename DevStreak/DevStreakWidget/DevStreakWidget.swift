@@ -109,16 +109,18 @@ private struct DevStreakSmallWidgetView: View {
                     .lineLimit(1)
             }
 
-            HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text("\(entry.displayState.currentStreak)")
-                    .font(WidgetTypography.mediumMetric)
-                    .foregroundStyle(WidgetPalette.primaryText)
-                    .monospacedDigit()
-                    .minimumScaleFactor(0.72)
+            WidgetSmallMetricSlot {
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text("\(entry.displayState.currentStreak)")
+                        .font(WidgetTypography.mediumMetric)
+                        .foregroundStyle(WidgetPalette.primaryText)
+                        .monospacedDigit()
+                        .minimumScaleFactor(0.72)
 
-                Text("일")
-                    .font(WidgetTypography.captionStrong)
-                    .foregroundStyle(WidgetPalette.primaryText)
+                    Text("일")
+                        .font(WidgetTypography.captionStrong)
+                        .foregroundStyle(WidgetPalette.primaryText)
+                }
             }
 
             Spacer(minLength: 0)
@@ -133,7 +135,7 @@ private struct DevStreakTodaySmallWidgetView: View {
     let entry: DevStreakWidgetEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("DevStreak")
                     .font(WidgetTypography.captionStrong)
@@ -145,13 +147,28 @@ private struct DevStreakTodaySmallWidgetView: View {
                     .lineLimit(1)
             }
 
-            WidgetTodayStatusMark(isCompleted: entry.displayState.isTodayCompleted, size: 56)
+            WidgetSmallMetricSlot {
+                WidgetTodayStatusMark(isCompleted: entry.displayState.isTodayCompleted, size: 46)
+            }
 
             Spacer(minLength: 0)
 
             WidgetIdeaMemoCountView(count: entry.displayState.pendingIdeaCount)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+private struct WidgetSmallMetricSlot<Content: View>: View {
+    private let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .frame(height: 64, alignment: .center)
     }
 }
 

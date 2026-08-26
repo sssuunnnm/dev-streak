@@ -33,17 +33,11 @@ DevStreak는 GitHub 잔디처럼 눈에 보이는 흐름을 앱 안으로 가져
 ## How It Works
 
 1. 사용자가 GitHub fine-grained personal access token을 앱에 저장합니다.
-2. DevStreak가 지정된 저장소의 커밋 기록을 read-only로 확인합니다.
+2. DevStreak가 앱에 설정된 단일 저장소의 커밋 기록을 read-only로 확인합니다.
 3. 인정된 콘텐츠 경로에 변경이 있으면 해당 날짜를 완료 기록으로 반영합니다.
 4. 대시보드, 캘린더, 위젯, 알림이 같은 기록 상태를 기준으로 갱신됩니다.
 
-대상 저장소:
-
-```text
-sssuunnnm/dev-archive
-```
-
-현재 MVP는 `main` branch와 open Pull Request commit을 기준으로 확인합니다. 다중 저장소 선택과 branch/ref 선택은 후속 범위입니다.
+현재 MVP는 앱에 설정된 하나의 저장소, `main` branch, open Pull Request commit을 기준으로 확인합니다. 앱 안에서 사용자가 저장소를 입력하거나 변경하는 기능, 다중 저장소 선택, branch/ref 선택은 후속 범위입니다.
 
 ## Main Features
 
@@ -307,4 +301,4 @@ App Store Connect metadata는 `docs/app-store/metadata-ko.md`에서 로컬 전�
 - Initial backfill resume: 최근 3년 초기 동기화가 API request budget을 초과하면 다음 시도도 처음부터 다시 시작합니다. pagination 진행 위치 저장 또는 기간 단위 분할 저장이 필요합니다.
 - Dashboard GitHub verification coordinator: Dashboard의 자동 verification 상태 전이와 side effect 일부가 아직 `DashboardView`에 남아 있습니다. Settings 쪽처럼 coordinator/view model로 분리하면 테스트와 유지보수가 쉬워집니다.
 - GitHub branch selection: 현재 MVP는 `main` branch와 open PR commit만 확인합니다. 사용자가 branch/ref를 선택하는 UI는 후속 범위입니다.
-- Repository scope expansion: 현재 MVP는 `sssuunnnm/dev-archive` 단일 repository만 지원합니다. 다중 repository 선택은 후속 범위입니다.
+- Repository scope expansion: 현재 MVP는 앱에 설정된 단일 repository만 지원합니다. 사용자 repository 입력과 다중 repository 선택은 후속 범위입니다.

@@ -15,11 +15,13 @@ Last updated: 2026-08-26
 - Subtitle: `GitHub 기록 습관 관리`
 - Primary language: 한국어
 - Bundle ID: `com.sssuunnnm.DevStreakApp`
-- SKU: `devstreak-ios-1`
+- SKU: `com.sssuunnnm.DevStreakApp`
+- Apple ID: App Store Connect에서만 확인하고 repository에는 기록하지 않는다.
 - Privacy Policy URL: `https://sssuunnnm.notion.site/DevStreak-Privacy-Policy-3c70f65e84d680c0a1e0e02425ccc7d2`
 - Category: 개발자 도구
 - Secondary Category: 생산성
 - Content Rights: 앱이 GitHub 기록에 접근하므로, 질문이 "타사 콘텐츠를 포함, 표시 또는 접근하는가"라면 `예`를 선택하고 사용자가 직접 연결한 GitHub 토큰의 읽기 권한으로 접근한다고 본다.
+- License Agreement: Apple의 표준 사용권 계약
 
 ## Age Rating
 

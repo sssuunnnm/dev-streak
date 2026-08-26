@@ -64,6 +64,7 @@ nonisolated struct GitHubVerificationBudgetPolicy {
 nonisolated enum GitHubVerificationDefaults {
     static let dashboardLookbackDays = 7
     static let backfillLookbackDays = 30
+    static let initialBackfillLookbackDays = 365 * 3
     static let authenticatedBackfillRequestLimit = 240
     static let authenticatedInitialBackfillRequestLimit = 1_000
 }

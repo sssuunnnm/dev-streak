@@ -11,22 +11,65 @@ struct CalendarMonthView: View {
     let records: [DailyRecord]
     let now: Date
 
+    @State private var visibleMonth: Date
+
     private let dateService = DateService()
     private let calendarService = HabitCalendarService()
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
     private let dayCellHeight: CGFloat = 34
 
+    init(records: [DailyRecord], now: Date) {
+        self.records = records
+        self.now = now
+        _visibleMonth = State(initialValue: DateService().startOfMonth(containing: now) ?? now)
+    }
+
     private var monthDays: [HabitCalendarDay] {
-        calendarService.days(containing: now, records: records, now: now)
+        calendarService.days(containing: visibleMonth, records: records, now: now)
     }
 
     private var monthlyRate: MonthlyCompletionRate {
-        calendarService.monthlyCompletionRate(containing: now, records: records, now: now)
+        calendarService.monthlyCompletionRate(containing: visibleMonth, records: records, now: now)
     }
 
     private var leadingBlankDayCount: Int {
-        dateService.leadingBlankDayCount(containing: now)
+        dateService.leadingBlankDayCount(containing: visibleMonth)
+    }
+
+    private var currentMonth: Date {
+        dateService.startOfMonth(containing: now) ?? now
+    }
+
+    private var earliestVisibleMonth: Date {
+        let threeYearStart = dateService
+            .addingMonths(-36, to: currentMonth)
+            .flatMap { dateService.startOfMonth(containing: $0) } ?? currentMonth
+        let firstCompletedMonth = records
+            .filter { $0.status.isCompleted }
+            .compactMap { dateService.date(from: $0.dateKey) }
+            .min()
+            .flatMap { dateService.startOfMonth(containing: $0) }
+
+        guard let firstCompletedMonth else {
+            return currentMonth
+        }
+
+        return dateService.compareMonth(firstCompletedMonth, threeYearStart) == .orderedAscending
+            ? threeYearStart
+            : firstCompletedMonth
+    }
+
+    private var isCurrentMonthVisible: Bool {
+        dateService.isSameMonth(visibleMonth, currentMonth)
+    }
+
+    private var canMoveToPreviousMonth: Bool {
+        dateService.compareMonth(visibleMonth, earliestVisibleMonth) == .orderedDescending
+    }
+
+    private var titleText: String {
+        isCurrentMonthVisible ? "이번 달" : dateService.monthTitle(containing: visibleMonth)
     }
 
     private var rateText: String {
@@ -40,11 +83,33 @@ struct CalendarMonthView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .firstTextBaseline) {
-                Text("이번 달")
+                Text(titleText)
                     .font(DesignTokens.Typography.headline)
                     .foregroundStyle(DesignTokens.Color.primaryText)
 
                 Spacer()
+
+                Button {
+                    moveMonth(by: -1)
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(canMoveToPreviousMonth ? DesignTokens.Color.textSecondary : DesignTokens.Color.textSecondary.opacity(0.35))
+                .disabled(!canMoveToPreviousMonth)
+                .accessibilityLabel("이전 달")
+
+                Button {
+                    moveMonth(by: 1)
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(!isCurrentMonthVisible ? DesignTokens.Color.textSecondary : DesignTokens.Color.textSecondary.opacity(0.35))
+                .disabled(isCurrentMonthVisible)
+                .accessibilityLabel("다음 달")
 
                 Text(rateText)
                     .font(DesignTokens.Typography.headline)
@@ -70,6 +135,38 @@ struct CalendarMonthView: View {
                 }
             }
         }
+        .onChange(of: records.map(\.dateKey)) {
+            clampVisibleMonth()
+        }
+        .onChange(of: dateService.dateKey(for: now)) {
+            clampVisibleMonth()
+        }
+    }
+
+    private func moveMonth(by months: Int) {
+        guard let nextMonth = dateService.addingMonths(months, to: visibleMonth) else {
+            return
+        }
+
+        visibleMonth = clampedMonth(nextMonth)
+    }
+
+    private func clampVisibleMonth() {
+        visibleMonth = clampedMonth(visibleMonth)
+    }
+
+    private func clampedMonth(_ month: Date) -> Date {
+        let normalizedMonth = dateService.startOfMonth(containing: month) ?? month
+
+        if dateService.compareMonth(normalizedMonth, currentMonth) == .orderedDescending {
+            return currentMonth
+        }
+
+        if dateService.compareMonth(normalizedMonth, earliestVisibleMonth) == .orderedAscending {
+            return earliestVisibleMonth
+        }
+
+        return normalizedMonth
     }
 }
 

@@ -16,7 +16,7 @@ struct GitHubConnectionSettingsView: View {
     private let credentialStore = GitHubCredentialStore()
     private let backfillService = GitHubBackfillService()
     private let initialBackfillService = GitHubBackfillService(
-        lookbackDays: nil,
+        lookbackDays: GitHubVerificationDefaults.initialBackfillLookbackDays,
         authenticatedRequestLimit: GitHubVerificationDefaults.authenticatedInitialBackfillRequestLimit
     )
     private let initialBackfillStore = GitHubInitialBackfillStore()
@@ -83,7 +83,7 @@ struct GitHubConnectionSettingsView: View {
                         .font(DesignTokens.Typography.headline)
                         .foregroundStyle(DesignTokens.Color.primaryText)
 
-                    Text("최근 GitHub 기록을 캘린더에 반영합니다.")
+                    Text("GitHub 기록이 확인된 날짜를 캘린더에 반영합니다.")
                         .font(DesignTokens.Typography.subheadline)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -100,6 +100,8 @@ struct GitHubConnectionSettingsView: View {
                         .font(DesignTokens.Typography.footnote)
                         .foregroundStyle(backfillState.tint)
                 }
+            } footer: {
+                Text("최초 연결 시 최근 3년의 기록을 자동으로 한 번 동기화합니다. 이후 수동 동기화는 최근 30일 범위로 확인합니다.")
             }
         }
         .navigationTitle("GitHub 연결")
@@ -303,7 +305,7 @@ private extension GitHubVerificationFailure {
         case .networkFailure:
             return "네트워크 연결을 확인해 주세요."
         case .budgetExceeded:
-            return "GitHub 기록이 많아 동기화를 완료하지 못했습니다."
+            return "GitHub 기록이 많아 최근 기록 동기화를 완료하지 못했습니다."
         case .decodingFailure, .unknown:
             return "동기화를 완료하지 못했습니다."
         }

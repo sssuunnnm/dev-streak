@@ -29,6 +29,7 @@ build-*/
 # App Store / export local files
 ExportOptions.plist
 *.mobileprovision
+docs/app-store/metadata-ko.md
 
 # macOS metadata
 .DS_Store

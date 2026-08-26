@@ -272,7 +272,6 @@ xcodebuild \
 
 App Store / TestFlight 제출용 metadata와 preview image 초안은 repo 안에 보관합니다.
 
-- [metadata-ko.md](docs/app-store/metadata-ko.md): App Store Connect 한국어 메타데이터
 - [Preview-1.png](docs/app-store/previews/Preview-1.png): 하루 기록과 dashboard
 - [Preview-2.png](docs/app-store/previews/Preview-2.png): GitHub 연결 필요 상태
 - [Preview-3.png](docs/app-store/previews/Preview-3.png): calendar와 home screen widget

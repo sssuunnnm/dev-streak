@@ -12,26 +12,27 @@ struct CalendarMonthView: View {
     let now: Date
     let isTrackingEnabled: Bool
     let repositoryCreatedAt: Date?
+    let isExpandedLayout: Bool
 
     @State private var visibleMonth: Date
 
     private let dateService = DateService()
     private let calendarService = HabitCalendarService()
     private let monthRangePolicy = CalendarMonthRangePolicy()
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
-    private let dayCellHeight: CGFloat = 34
 
     init(
         records: [DailyRecord],
         now: Date,
         isTrackingEnabled: Bool = true,
-        repositoryCreatedAt: Date? = nil
+        repositoryCreatedAt: Date? = nil,
+        isExpandedLayout: Bool = false
     ) {
         self.records = records
         self.now = now
         self.isTrackingEnabled = isTrackingEnabled
         self.repositoryCreatedAt = repositoryCreatedAt
+        self.isExpandedLayout = isExpandedLayout
         _visibleMonth = State(initialValue: DateService().startOfMonth(containing: now) ?? now)
     }
 
@@ -92,11 +93,23 @@ struct CalendarMonthView: View {
         return monthlyRate.rate.formatted(.percent.precision(.fractionLength(0)))
     }
 
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: gridSpacing), count: 7)
+    }
+
+    private var gridSpacing: CGFloat {
+        isExpandedLayout ? 12 : 8
+    }
+
+    private var dayCellHeight: CGFloat {
+        isExpandedLayout ? 52 : 34
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: isExpandedLayout ? 24 : 18) {
             HStack(alignment: .firstTextBaseline) {
                 Text(titleText)
-                    .font(DesignTokens.Typography.headline)
+                    .font(isExpandedLayout ? DesignTokens.Typography.title3 : DesignTokens.Typography.headline)
                     .foregroundStyle(DesignTokens.Color.primaryText)
 
                 Spacer()
@@ -124,15 +137,15 @@ struct CalendarMonthView: View {
                 .accessibilityLabel("다음 달")
 
                 Text(rateText)
-                    .font(DesignTokens.Typography.headline)
+                    .font(isExpandedLayout ? DesignTokens.Typography.title3 : DesignTokens.Typography.headline)
                     .monospacedDigit()
                     .foregroundStyle(DesignTokens.Color.accent)
             }
 
-            LazyVGrid(columns: columns, spacing: 8) {
+            LazyVGrid(columns: columns, spacing: gridSpacing) {
                 ForEach(weekdaySymbols.indices, id: \.self) { index in
                     Text(weekdaySymbols[index])
-                        .font(DesignTokens.Typography.captionStrong)
+                        .font(isExpandedLayout ? DesignTokens.Typography.subheadline : DesignTokens.Typography.captionStrong)
                         .foregroundStyle(DesignTokens.Color.textSecondary)
                         .frame(maxWidth: .infinity)
                 }
@@ -143,7 +156,11 @@ struct CalendarMonthView: View {
                 }
 
                 ForEach(monthDays) { day in
-                    CalendarDayCell(day: day, height: dayCellHeight)
+                    CalendarDayCell(
+                        day: day,
+                        height: dayCellHeight,
+                        isExpandedLayout: isExpandedLayout
+                    )
                 }
             }
         }
@@ -187,6 +204,7 @@ struct CalendarMonthView: View {
 private struct CalendarDayCell: View {
     let day: HabitCalendarDay
     let height: CGFloat
+    let isExpandedLayout: Bool
 
     var body: some View {
         ZStack {
@@ -198,7 +216,7 @@ private struct CalendarDayCell: View {
                 }
 
             Text("\(day.dayNumber)")
-                .font(DesignTokens.Typography.captionStrong)
+                .font(isExpandedLayout ? DesignTokens.Typography.headline : DesignTokens.Typography.captionStrong)
                 .monospacedDigit()
                 .foregroundStyle(foregroundStyle)
         }

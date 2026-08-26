@@ -103,6 +103,8 @@ struct DashboardView: View {
                     }
                 }
                 .padding(DesignTokens.Spacing.page)
+                .frame(maxWidth: 520, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
             .font(DesignTokens.Typography.body)
             .navigationBarTitleDisplayMode(.inline)

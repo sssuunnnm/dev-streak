@@ -303,6 +303,27 @@ struct GitHubVerificationServiceTests {
         #expect(client.detailSHAs == ["old-content"])
     }
 
+    @Test func fullHistoryBackfillOmitsSinceAndCanVerifyOlderDates() async throws {
+        let client = FakeGitHubAPIClient()
+        client.mainCommitPages = [
+            GitHubPage(values: [Self.commit("history-content", "2026-01-10")], hasNextPage: false)
+        ]
+        client.details["history-content"] = GitHubCommitDetail(
+            sha: "history-content",
+            filenames: ["src/content/articles/history.md"]
+        )
+
+        let result = await Self.service(
+            client: client,
+            maxRequests: 20,
+            lookbackDays: nil
+        )
+        .verify(now: Self.noon("2026-08-22"))
+
+        #expect(result == .success(GitHubVerificationResult(verifiedDateKeys: ["2026-01-10"])))
+        #expect(client.commitSinceValues == [nil])
+    }
+
     @Test func detailCacheAvoidsRepeatedRequestForSameSHAAcrossRuns() async throws {
         let client = FakeGitHubAPIClient()
         let cache = GitHubCommitDetailCache()
@@ -323,7 +344,7 @@ struct GitHubVerificationServiceTests {
         cache: GitHubCommitDetailCache = GitHubCommitDetailCache(),
         maxRequests: Int? = 20,
         credentialStore: GitHubCredentialStore = GitHubCredentialStore(tokenStore: FakeGitHubTokenStore()),
-        lookbackDays: Int = 7
+        lookbackDays: Int? = 7
     ) -> GitHubVerificationService {
         GitHubVerificationService(
             client: client,
@@ -394,6 +415,7 @@ final class FakeGitHubAPIClient: GitHubAPIClientProtocol {
     var details: [String: GitHubCommitDetail] = [:]
     var detailSHAs: [String] = []
     var mainCommitRequestedPages: [Int] = []
+    var commitSinceValues: [Date?] = []
     var pullRequestRequestedPages: [Int] = []
     var pullRequestCommitRequestedPages: [Int: [Int]] = [:]
     var error: GitHubAPIError?
@@ -423,6 +445,7 @@ final class FakeGitHubAPIClient: GitHubAPIClientProtocol {
         }
 
         mainCommitRequestedPages.append(page)
+        commitSinceValues.append(since)
         return Self.page(mainCommitPages, page: page)
     }
 

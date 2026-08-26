@@ -277,12 +277,12 @@ src/content/snippets/
 
 ### GitHub History Sync
 
-GitHub 설정 화면에는 최초 연결 후 자동으로 한 번 실행되고, 이후 사용자가 명시적으로 다시 실행할 수 있는 `최근 30일 동기화`가 있습니다.
+GitHub 설정 화면에는 최초 연결 후 자동으로 한 번 실행되는 전체 기록 동기화와, 이후 사용자가 명시적으로 다시 실행할 수 있는 `최근 30일 동기화`가 있습니다.
 
 정책:
 
 - Dashboard 일반 refresh의 7일 lookback은 유지
-- 최초 연결 후 최근 30일 backfill 자동 실행
+- 최초 연결 후 repository 전체 commit history backfill 자동 실행
 - 사용자가 직접 다시 실행할 때도 최근 30일 backfill
 - 기존 기록은 삭제하지 않음
 - 새 기록 추가 또는 기존 기록 승격만 수행

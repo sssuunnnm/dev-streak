@@ -15,6 +15,10 @@ struct GitHubConnectionSettingsView: View {
 
     private let credentialStore = GitHubCredentialStore()
     private let backfillService = GitHubBackfillService()
+    private let initialBackfillService = GitHubBackfillService(
+        lookbackDays: nil,
+        authenticatedRequestLimit: GitHubVerificationDefaults.authenticatedInitialBackfillRequestLimit
+    )
     private let initialBackfillStore = GitHubInitialBackfillStore()
 
     @State private var token = ""
@@ -178,7 +182,7 @@ struct GitHubConnectionSettingsView: View {
     }
 
     private func runBackfill() {
-        runBackfill(markInitialBackfillCompleted: true)
+        runBackfill(service: backfillService, markInitialBackfillCompleted: true)
     }
 
     private func runInitialBackfillIfNeeded() {
@@ -188,14 +192,14 @@ struct GitHubConnectionSettingsView: View {
             return
         }
 
-        runBackfill(markInitialBackfillCompleted: true)
+        runBackfill(service: initialBackfillService, markInitialBackfillCompleted: true)
     }
 
-    private func runBackfill(markInitialBackfillCompleted: Bool) {
+    private func runBackfill(service: GitHubBackfillService, markInitialBackfillCompleted: Bool) {
         backfillState = .syncing
 
         Task {
-            let result = await backfillService.backfill(
+            let result = await service.backfill(
                 records: records,
                 ideas: ideas,
                 modelContext: modelContext,

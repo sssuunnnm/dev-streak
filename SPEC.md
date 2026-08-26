@@ -537,7 +537,7 @@ API rules:
 - 동일 commit은 중복 처리하지 않는다.
 - network 실패는 사용자에게 재시도 가능한 상태로 표시한다.
 - Dashboard verification 기본 lookback은 최근 7일이다.
-- 최초 GitHub 연결 후 history sync는 최근 30일을 자동으로 한 번 확인한다.
+- 최초 GitHub 연결 후 history sync는 repository의 전체 commit history를 자동으로 한 번 확인한다.
 - 사용자가 명시적으로 실행하는 history sync도 최근 30일을 확인한다.
 - 오늘 DailyRecord가 이미 `githubVerified`이면 앱 실행/활성화 시 자동 verification을 다시 실행하지 않는다.
 - background polling 또는 server-side scheduler는 구현하지 않는다.

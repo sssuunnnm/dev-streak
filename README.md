@@ -37,7 +37,7 @@ DevStreak는 다음 원칙을 기준으로 구현되어 있습니다.
 
 1. Dashboard에서 오늘 기록 상태와 streak를 확인합니다.
 2. 오늘 GitHub 기록을 남겼다면 `오늘 기록 완료`로 수동 완료 처리할 수 있습니다.
-3. DevStreak가 최근 GitHub 콘텐츠 활동을 read-only로 확인합니다. Public repository는 token 없이 확인할 수 있고, Fine-grained PAT는 안정적인 요청을 위한 선택 사항입니다.
+3. DevStreak가 저장된 Fine-grained PAT로 최근 GitHub 콘텐츠 활동을 read-only로 확인합니다.
 4. 글감은 `아이디어 메모`에 저장하고, 필요할 때 Claude prompt로 복사해 넘깁니다.
 5. Widget과 알림은 앱을 열지 않아도 오늘 기록 상태를 계속 상기시킵니다.
 
@@ -112,7 +112,7 @@ Reminder는 UserNotifications 기반 local notification으로 동작합니다.
 - 저녁 18:00
 - 밤 22:00
 
-각 slot은 개별 enable/disable과 시간 변경을 지원합니다. 변경된 설정은 사용자가 `변경사항 적용`을 확인한 뒤 `ReminderSettingsStore`를 통해 UserDefaults에 저장됩니다.
+알림 권한을 허용한 뒤 각 slot의 enable/disable과 시각을 변경할 수 있습니다. 변경된 설정은 사용자가 `적용`을 확인한 뒤 `ReminderSettingsStore`를 통해 UserDefaults에 저장됩니다.
 
 Scheduling 정책:
 
@@ -122,7 +122,7 @@ Scheduling 정책:
 - 오늘 완료 상태면 오늘 reminder는 예약하지 않음
 - 미래 날짜 reminder는 유지
 - 오늘 완료 시 오늘 날짜의 pending reminder만 취소
-- notification permission과 reminder preference는 독립적으로 관리
+- notification permission이 허용되기 전에는 reminder preference를 수정하지 않음
 
 Race condition 방지를 위해 scheduling generation을 사용합니다. 오래된 sync 작업이 최신 cancel/sync 결과를 덮어쓰지 못하도록 `ReminderScheduleState`에서 최신 generation만 request를 추가할 수 있게 관리합니다.
 
@@ -187,12 +187,14 @@ Widget은 WidgetKit 기반으로 구현되어 있습니다.
 - `accessoryRectangular`
 - `accessoryInline`
 
+Home Screen widget은 연속 기록 중심 위젯을 제공합니다. Small 위젯은 현재 연속 기록과 아이디어 메모 개수를 표시하고, medium 위젯은 최근 7일 완료 상태를 함께 표시합니다. 오늘 기록 위젯은 Lock Screen accessory circular에서 완료 여부를 표시합니다.
+
 Widget은 SwiftData store를 직접 열지 않습니다. App target이 현재 상태를 `WidgetSnapshot`으로 만들어 App Group UserDefaults에 저장하고, Widget target은 이 snapshot만 읽습니다.
 
 공유 App Group:
 
 ```text
-group.com.sssuunnnm.DevStreak
+group.com.sssuunnnm.DevStreakApp
 ```
 
 Snapshot 구조:
@@ -203,6 +205,7 @@ struct WidgetSnapshot: Codable, Equatable {
     var isTodayCompleted: Bool
     var currentStreak: Int
     var pendingIdeaCount: Int
+    var recentDays: [WidgetRecentDay]
     var updatedAt: Date
 }
 ```
@@ -229,8 +232,8 @@ sssuunnnm/dev-archive
 
 인증:
 
-- Public unauthenticated API fallback
-- Fine-grained PAT 선택 지원
+- GitHub 연결 전에는 자동 확인을 실행하지 않음
+- Fine-grained PAT 기반 확인
 - Token은 Keychain에만 저장
 - Token이 있으면 `Authorization: Bearer <token>` 사용
 - GitHub write permission 없음
@@ -474,8 +477,8 @@ Targets:
 
 Bundle identifiers:
 
-- App: `com.sssuunnnm.DevStreak`
-- Widget: `com.sssuunnnm.DevStreak.DevStreakWidget`
+- App: `com.sssuunnnm.DevStreakApp`
+- Widget: `com.sssuunnnm.DevStreakApp.DevStreakWidget`
 
 ## Build & Test
 

@@ -61,7 +61,7 @@ nonisolated struct KeychainGitHubTokenStore: GitHubTokenStoreProtocol {
     private let account: String
 
     init(
-        service: String = "com.sssuunnnm.DevStreak.github",
+        service: String = "com.sssuunnnm.DevStreakApp.github",
         account: String = GitHubRepositoryConfiguration.keychainAccount
     ) {
         self.service = service

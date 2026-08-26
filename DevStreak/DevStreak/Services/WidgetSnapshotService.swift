@@ -32,6 +32,7 @@ struct WidgetSnapshotService {
             isTodayCompleted: todayRecord?.status.isCompleted == true,
             currentStreak: streakService.currentStreak(records: records, now: now),
             pendingIdeaCount: ideas.filter { $0.status == .inbox }.count,
+            recentDays: recentDays(records: records, todayKey: todayKey),
             updatedAt: now
         )
     }
@@ -42,9 +43,28 @@ struct WidgetSnapshotService {
         let didSave = store.save(snapshot)
 
         if didSave {
-            WidgetCenter.shared.reloadTimelines(ofKind: WidgetConstants.widgetKind)
+            WidgetCenter.shared.reloadTimelines(ofKind: WidgetConstants.streakWidgetKind)
+            WidgetCenter.shared.reloadTimelines(ofKind: WidgetConstants.todayWidgetKind)
         }
 
         return didSave
+    }
+
+    private func recentDays(records: [DailyRecord], todayKey: String) -> [WidgetRecentDay] {
+        let completedDateKeys = Set(records.filter { $0.status.isCompleted }.map(\.dateKey))
+
+        return (-6...0).compactMap { offset in
+            guard let dateKey = dateService.addingDays(offset, to: todayKey),
+                  let dayNumber = dateService.dayNumber(for: dateKey) else {
+                return nil
+            }
+
+            return WidgetRecentDay(
+                dateKey: dateKey,
+                dayNumber: dayNumber,
+                isCompleted: completedDateKeys.contains(dateKey),
+                isToday: dateKey == todayKey
+            )
+        }
     }
 }

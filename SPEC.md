@@ -92,12 +92,12 @@ Targets:
 
 Bundle identifiers:
 
-- App: `com.sssuunnnm.DevStreak`
-- Widget: `com.sssuunnnm.DevStreak.DevStreakWidget`
+- App: `com.sssuunnnm.DevStreakApp`
+- Widget: `com.sssuunnnm.DevStreakApp.DevStreakWidget`
 
 App Group:
 
-- `group.com.sssuunnnm.DevStreak`
+- `group.com.sssuunnnm.DevStreakApp`
 
 ## 4. Main User Flow
 
@@ -282,7 +282,7 @@ Reminder는 UserNotifications 기반 local notification으로 동작한다.
 
 - 개별 enable / disable 가능
 - 사용자가 시간 변경 가능
-- 시간 또는 enable 상태 변경 후 사용자가 확인 action을 눌렀을 때 저장 및 scheduling 적용
+- 시간 또는 enable 상태 변경 후 사용자가 적용 action을 눌렀을 때 저장 및 scheduling 적용
 - local notification으로 동작
 - 서버나 backend를 사용하지 않음
 
@@ -292,12 +292,13 @@ Permission rules:
 - Settings 화면에 notification authorization 상태를 명확히 표시한다.
 - `notDetermined` 상태에서는 "알림 허용하기" action을 제공한다.
 - 사용자가 해당 action을 명시적으로 눌렀을 때 requestAuthorization을 실행한다.
+- 알림 권한이 허용되기 전에는 reminder preference 토글과 시간 설정에 접근할 수 없다.
 - permission이 denied된 경우 crash하거나 반복 요청하지 않는다.
 - denied 상태에서는 알림이 시스템 설정에서 비활성화되어 있음을 명확히 표시한다.
 - denied 상태에서는 가능한 경우 iOS Settings로 이동할 수 있는 action을 제공한다.
 - authorized / provisional / ephemeral 상태에서는 현재 reminder preferences를 기준으로 notification을 예약한다.
 - reminder preference enabled 값과 notification authorization 상태는 독립적으로 유지한다.
-- permission이 없어도 reminder preference 변경은 저장할 수 있지만 실제 notification은 예약하지 않는다.
+- permission이 없으면 기존 reminder preference 값은 유지하지만 새 변경은 받지 않는다.
 
 Scheduling rules:
 
@@ -312,7 +313,7 @@ Scheduling rules:
 - 오늘 goal을 완료하면 오늘 날짜 identifier만 취소한다.
 - 미래 날짜 notification은 취소하지 않는다.
 - 중복 notification request를 만들지 않는다.
-- 사용자가 변경사항 적용을 확인하면 DevStreak가 관리하는 pending reminder를 정리하고 새 설정 기준으로 14일 rolling horizon을 다시 채운다.
+- 사용자가 변경사항을 적용하면 DevStreak가 관리하는 pending reminder를 정리하고 새 설정 기준으로 14일 rolling horizon을 다시 채운다.
 - 앱 실행/활성화 시 필요한 경우 현재 설정 기준으로 14일 rolling schedule을 동기화한다.
 - 사용자가 다음 날 앱을 실행하지 않아도 이미 예약된 notification이 정상적으로 동작해야 한다.
 
@@ -415,8 +416,13 @@ Widget은 WidgetKit 기반으로 구현한다.
 
 Widget 표시 정보:
 
-- Today `0 / 1` 또는 `1 / 1`
+- Today completion status
 - Current streak
+- Home Screen widget은 current streak 중심 위젯을 제공한다.
+- Home Screen small streak widget은 current streak와 pending idea memo count를 표시한다.
+- Home Screen medium widget은 최근 7일 완료 상태를 함께 표시한다.
+- Today completion widget은 Lock Screen accessory circular family만 지원하며 완료 여부를 표시한다.
+- Lock Screen accessory circular widget은 current streak 중심 위젯과 Today completion 중심 위젯을 제공한다.
 - Write shortcut / dashboard deep link
 - 지원 family에 따라 pending idea count 등 최소 snapshot 정보
 
@@ -430,6 +436,7 @@ Widget이 main app의 SwiftData store 전체를 직접 읽지 않는다.
 - `isTodayCompleted`
 - `currentStreak`
 - `pendingIdeaCount`
+- `recentDays`
 - `updatedAt`
 
 Widget snapshot은 Codable local data로 저장한다.
@@ -519,8 +526,8 @@ Persistence rules:
 
 Authentication and security rules:
 
-- 대상 repository는 public repository이므로 token 없이 public unauthenticated GitHub REST API로 확인할 수 있다.
-- Fine-grained PAT는 선택 사항이다.
+- Dashboard GitHub verification은 Fine-grained PAT가 Keychain에 저장된 뒤에만 실행한다.
+- GitHub 연결 전에는 Dashboard에 연결 필요 상태를 표시하고 자동 확인을 실행하지 않는다.
 - Token이 있으면 `Authorization: Bearer <token>` header를 사용한다.
 - Token은 Keychain에만 저장한다.
 - Token이 저장되어 있으면 GitHub 연결 설정 화면에서 token 입력칸은 숨기고 연결 테스트와 삭제 action만 제공한다.

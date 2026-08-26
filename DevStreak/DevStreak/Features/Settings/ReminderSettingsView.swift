@@ -17,10 +17,13 @@ struct ReminderSettingsView: View {
     @State private var settings = ReminderSettings.default
     @State private var savedSettings = ReminderSettings.default
     @State private var authorizationStatus = ReminderAuthorizationStatus.notDetermined
-    @State private var isApplyConfirmationPresented = false
 
     private var hasPendingChanges: Bool {
         settings != savedSettings
+    }
+
+    private var canEditReminders: Bool {
+        authorizationStatus.canScheduleNotifications
     }
 
     var body: some View {
@@ -39,26 +42,24 @@ struct ReminderSettingsView: View {
             }
 
             Section {
+                if hasPendingChanges {
+                    ReminderPendingChangesRow(
+                        applyChanges: applyPendingChanges,
+                        discardChanges: {
+                            settings = savedSettings
+                        }
+                    )
+                }
+
                 reminderRow(slot: .morning)
                 reminderRow(slot: .evening)
                 reminderRow(slot: .night)
             } header: {
                 Text("리마인더")
             } footer: {
-                Text(hasPendingChanges ? "변경사항을 적용하면 알림 일정이 다시 설정됩니다." : "시간이나 토글을 바꾼 뒤 변경사항을 적용할 수 있습니다.")
+                Text(reminderFooterMessage)
             }
-
-            if hasPendingChanges {
-                Section {
-                    Button("변경사항 적용") {
-                        isApplyConfirmationPresented = true
-                    }
-
-                    Button("변경 취소", role: .cancel) {
-                        settings = savedSettings
-                    }
-                }
-            }
+            .disabled(!canEditReminders)
         }
         .navigationTitle("알림 설정")
         .font(DesignTokens.Typography.body)
@@ -69,19 +70,18 @@ struct ReminderSettingsView: View {
             await refreshAuthorizationStatus()
             await syncSchedule()
         }
-        .confirmationDialog(
-            "알림 설정을 적용할까요?",
-            isPresented: $isApplyConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button("적용") {
-                applyPendingChanges()
-            }
+    }
 
-            Button("취소", role: .cancel) {}
-        } message: {
-            Text("변경된 시간과 토글 상태로 앞으로의 알림을 다시 설정합니다.")
+    private var reminderFooterMessage: String {
+        guard canEditReminders else {
+            return "알림 권한을 허용하면 리마인더를 설정할 수 있습니다."
         }
+
+        if hasPendingChanges {
+            return "적용 전에는 앞으로의 알림 일정이 바뀌지 않습니다."
+        }
+
+        return "토글이나 시각을 변경한 뒤 적용할 수 있습니다."
     }
 
     private var permissionMessage: String {
@@ -104,7 +104,6 @@ struct ReminderSettingsView: View {
 
         return ReminderPreferenceRow(
             slot: slot,
-            preference: preference,
             isEnabled: Binding(
                 get: {
                     settings.preference(for: slot).isEnabled
@@ -237,46 +236,66 @@ private struct PermissionStatusCard: View {
     }
 }
 
+private struct ReminderPendingChangesRow: View {
+    let applyChanges: () -> Void
+    let discardChanges: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Label {
+                Text("변경사항 있음")
+                    .font(DesignTokens.Typography.subheadline)
+            } icon: {
+                Image(systemName: "exclamationmark.circle")
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(DesignTokens.Color.warning)
+            }
+
+            Spacer()
+
+            Button("취소", role: .cancel, action: discardChanges)
+                .buttonStyle(.borderless)
+
+            Button(action: applyChanges) {
+                Label("적용", systemImage: "checkmark")
+                    .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
 private struct ReminderPreferenceRow: View {
     let slot: ReminderSlot
-    let preference: ReminderPreference
     @Binding var isEnabled: Bool
     @Binding var selectedDate: Date
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Image(systemName: slot.iconName)
-                    .font(.system(size: 16, weight: .medium))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(slot.tint)
-                    .frame(width: 22)
+        HStack(spacing: 10) {
+            Image(systemName: slot.iconName)
+                .font(.system(size: 16, weight: .medium))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(slot.tint)
+                .frame(width: 22)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(slot.title)
-                        .font(DesignTokens.Typography.headline)
-                        .foregroundStyle(DesignTokens.Color.primaryText)
+            Text(slot.title)
+                .font(DesignTokens.Typography.headline)
+                .foregroundStyle(DesignTokens.Color.primaryText)
 
-                    Text(timeText)
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundStyle(DesignTokens.Color.textSecondary)
-                }
-
-                Spacer()
-
-                Toggle(slot.title, isOn: $isEnabled)
-                    .labelsHidden()
-            }
-
-            DatePicker("시간", selection: $selectedDate, displayedComponents: .hourAndMinute)
+            DatePicker("", selection: $selectedDate, displayedComponents: .hourAndMinute)
+                .labelsHidden()
                 .disabled(!isEnabled)
+                .frame(width: 104, alignment: .leading)
+                .accessibilityLabel("\(slot.title) 시간")
+
+            Spacer(minLength: 8)
+
+            Toggle(slot.title, isOn: $isEnabled)
+                .labelsHidden()
         }
         .padding(.vertical, 6)
         .font(DesignTokens.Typography.body)
-    }
-
-    private var timeText: String {
-        String(format: "%02d:%02d", preference.hour, preference.minute)
     }
 }
 

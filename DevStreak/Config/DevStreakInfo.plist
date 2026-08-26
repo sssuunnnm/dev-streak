@@ -20,7 +20,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.sssuunnnm.DevStreak</string>
+			<string>com.sssuunnnm.DevStreakApp</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>devstreak</string>

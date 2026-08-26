@@ -39,6 +39,29 @@ struct WidgetSnapshotServiceTests {
         #expect(snapshot.pendingIdeaCount == 2)
     }
 
+    @Test func snapshotIncludesRecentSevenDays() {
+        let records = [
+            Self.record("2026-08-16"),
+            Self.record("2026-08-18"),
+            Self.record("2026-08-22")
+        ]
+
+        let snapshot = Self.service.makeSnapshot(records: records, ideas: [], now: Self.noon("2026-08-22"))
+
+        #expect(snapshot.recentDays.map(\.dateKey) == [
+            "2026-08-16",
+            "2026-08-17",
+            "2026-08-18",
+            "2026-08-19",
+            "2026-08-20",
+            "2026-08-21",
+            "2026-08-22"
+        ])
+        #expect(snapshot.recentDays.map(\.dayNumber) == [16, 17, 18, 19, 20, 21, 22])
+        #expect(snapshot.recentDays.map(\.isCompleted) == [true, false, true, false, false, false, true])
+        #expect(snapshot.recentDays.map(\.isToday) == [false, false, false, false, false, false, true])
+    }
+
     private static var service: WidgetSnapshotService {
         WidgetSnapshotService(
             dateService: DateService(calendar: calendar),

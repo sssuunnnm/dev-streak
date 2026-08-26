@@ -517,9 +517,19 @@ private struct PrimaryGoalCard: View {
                     .minimumScaleFactor(0.74)
                     .contentTransition(.numericText())
 
-                Text(isCompleted ? completionSource : "짧게라도 하나 남기면 오늘의 기록이 이어집니다.")
-                    .font(DesignTokens.Typography.subheadline)
+                if canRevertManualCompletion {
+                    Button(action: revertAction) {
+                        Label("오늘 기록 취소", systemImage: "arrow.uturn.backward.circle")
+                            .font(DesignTokens.Typography.subheadline)
+                    }
+                    .buttonStyle(.plain)
                     .foregroundStyle(DesignTokens.Color.textSecondary)
+                    .accessibilityLabel("오늘 기록 취소")
+                } else {
+                    Text(isCompleted ? completionSource : "짧게라도 하나 남기면 오늘의 기록이 이어집니다.")
+                        .font(DesignTokens.Typography.subheadline)
+                        .foregroundStyle(DesignTokens.Color.textSecondary)
+                }
             }
 
             if !isCompleted {
@@ -527,11 +537,6 @@ private struct PrimaryGoalCard: View {
                     Label("오늘 기록 완료", systemImage: "checkmark.circle")
                 }
                 .buttonStyle(TactileButtonStyle(tint: DesignTokens.Color.accent))
-            } else if canRevertManualCompletion {
-                Button(action: revertAction) {
-                    Label("오늘 기록 취소", systemImage: "arrow.uturn.backward.circle")
-                }
-                .buttonStyle(TactileButtonStyle(tint: DesignTokens.Color.textSecondary))
             }
 
             GitHubVerificationRow(

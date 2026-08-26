@@ -180,6 +180,8 @@ DevStreak는 SwiftUI와 SwiftData를 중심으로 구성되어 있습니다.
 
 복잡한 계산과 side effect는 작은 service로 분리하고, 화면은 표시 상태와 사용자 action에 집중하도록 정리하고 있습니다.
 
+자세한 구현 메모와 hand-off 정보는 [technical-notes.md](docs/technical-notes.md)에 정리되어 있습니다.
+
 주요 service:
 
 - `DateService`: 날짜, timezone, dateKey 처리

@@ -1,185 +1,117 @@
 # DevStreak
 
-DevStreak는 개인 GitHub 기록 습관을 유지하기 위한 iOS companion app입니다.
+GitHub 기록을 꾸준히 이어가고 싶은 사람을 위한 가벼운 iOS 앱입니다.
 
-블로그 CMS나 배포 도구가 아니라, 하루에 최소 하나의 개발 기록을 남겼는지 확인하고 이어갈 수 있도록 돕는 로컬 우선 생산성 앱입니다.
+DevStreak는 매일 하나의 기록을 남기는 습관을 눈에 보이게 만들고, GitHub 커밋 기록을 바탕으로 오늘의 기록 여부와 연속 기록을 확인할 수 있게 도와줍니다.
+
+현재 버전은 하나의 저장소를 기준으로 기록을 확인합니다.
+
+## Screenshots
+
+| 하루 기록 | GitHub 연결 | 캘린더와 위젯 | 아이디어 메모 |
+| --- | --- | --- | --- |
+| ![하루 기록과 대시보드](docs/app-store/previews/Preview-1.png) | ![GitHub 연결 필요 상태](docs/app-store/previews/Preview-2.png) | ![캘린더와 홈 화면 위젯](docs/app-store/previews/Preview-3.png) | ![아이디어 메모](docs/app-store/previews/Preview-4.png) |
 
 ## What It Does
 
-- 오늘의 기록 상태를 `0 / 1` 또는 `1 / 1`로 표시
-- GitHub 활동 검증을 기반으로 Daily Goal 기록
-- 현재 연속 기록과 최고 연속 기록 계산
-- 월간 캘린더와 월간 달성률 표시
-- 아침, 저녁, 밤 리마인더 설정 및 14일 rolling local notification 예약
-- 글감 메모를 저장하는 Idea Inbox
-- Claude로 넘길 글쓰기 prompt 생성 및 clipboard 복사
-- Home Screen / Lock Screen Widget으로 오늘 상태 확인
-- `sssuunnnm/dev-archive` GitHub repository의 콘텐츠 변경을 read-only로 확인
+- 오늘 기록 상태를 `0 / 1` 또는 `1 / 1`로 표시합니다.
+- GitHub 커밋 기록을 확인해 오늘의 기록 여부를 자동으로 반영합니다.
+- 현재 연속 기록과 최고 기록을 보여줍니다.
+- 월간 캘린더로 기록 흐름을 확인할 수 있습니다.
+- 아이디어 메모를 저장하고 `사용함`, `보관함`으로 정리할 수 있습니다.
+- 기록 리마인더 알림을 설정할 수 있습니다.
+- 홈 화면 및 잠금 화면 위젯을 지원합니다.
 
-## Product Principles
+## Why
 
-DevStreak는 다음 원칙을 기준으로 구현되어 있습니다.
+꾸준히 기록하고 싶어도, 매일의 작은 기록은 쉽게 흩어집니다.
 
-- Local-first
-- SwiftUI first
-- SwiftData 기반 로컬 persistence
-- Widget과 app은 최소 snapshot만 공유
-- GitHub integration은 read-only
-- GitHub write operation 없음
-- Claude API 직접 연동 없음
-- Backend infrastructure 없음
-- Analytics / tracking SDK 없음
-- Token은 source code나 UserDefaults에 저장하지 않고 Keychain에만 저장
-- 작성 기록, 아이디어, 리마인더 설정, GitHub token을 개발자 서버로 수집하지 않음
-- 날짜와 timezone 처리는 `DateService`에서 명시적으로 처리
+DevStreak는 GitHub 잔디처럼 눈에 보이는 흐름을 앱 안으로 가져와 “오늘 했는지”, “며칠째 이어지고 있는지”, “이번 달은 어떤 흐름인지”를 빠르게 확인하도록 만든 도구입니다.
 
-## Core User Flow
+글을 대신 써주거나 저장소를 수정하는 앱이 아니라, 기록 습관을 놓치지 않게 돕는 companion app에 가깝습니다.
 
-1. Dashboard에서 오늘 기록 상태와 streak를 확인합니다.
-2. DevStreak가 저장된 Fine-grained PAT로 최근 GitHub 콘텐츠 활동을 read-only로 확인합니다.
-3. 글감은 `아이디어 메모`에 저장하고, 필요할 때 Claude prompt로 복사해 넘깁니다.
-4. Widget과 알림은 앱을 열지 않아도 오늘 기록 상태를 계속 상기시킵니다.
+## How It Works
 
-## Features
+1. 사용자가 GitHub fine-grained personal access token을 앱에 저장합니다.
+2. DevStreak가 지정된 저장소의 커밋 기록을 read-only로 확인합니다.
+3. 인정된 콘텐츠 경로에 변경이 있으면 해당 날짜를 완료 기록으로 반영합니다.
+4. 대시보드, 캘린더, 위젯, 알림이 같은 기록 상태를 기준으로 갱신됩니다.
+
+대상 저장소:
+
+```text
+sssuunnnm/dev-archive
+```
+
+현재 MVP는 `main` branch와 open Pull Request commit을 기준으로 확인합니다. 다중 저장소 선택과 branch/ref 선택은 후속 범위입니다.
+
+## Main Features
 
 ### Dashboard
 
-Dashboard는 앱의 중심 화면입니다.
+대시보드는 앱의 첫 화면입니다.
 
-- 오늘 날짜
-- 오늘 Daily Goal 상태
+- 오늘 날짜와 목표 상태
 - 현재 연속 기록
 - 최고 기록
 - GitHub 기록 확인 상태
-- Idea Inbox 대기 개수
-- 이번 달 calendar와 completion rate
+- 아이디어 메모 대기 개수
+- 월간 캘린더와 달성률
 
-오늘이 아직 미완료인 상태는 실패로 처리하지 않으며, 어제까지 이어진 streak도 오늘 pending이라는 이유만으로 끊지 않습니다.
-
-### Daily Records
-
-DailyRecord는 SwiftData `@Model`로 저장됩니다.
-
-```swift
-@Model
-final class DailyRecord {
-    @Attribute(.unique) var dateKey: String
-    var statusRawValue: String
-    var completedAt: Date?
-    var createdAt: Date
-}
-```
-
-지원 상태:
-
-- `pending`
-- `manualCompleted`
-- `githubVerified`
-
-`manualCompleted`는 기존 local 데이터 호환 상태이며, `githubVerified`만 completed day로 계산됩니다.
-
-### Streak
-
-`StreakService`가 current streak와 best streak를 계산합니다.
-
-Current streak는 다음 규칙을 따릅니다.
-
-- 오늘 완료 상태면 오늘부터 역방향으로 계산
-- 오늘 미완료라도 어제가 완료 상태면 어제까지의 streak 유지
-- 과거 날짜가 missed로 확정되었을 때 streak가 끊김
-
-이 규칙 덕분에 오늘이 아직 진행 중인 상태만으로 streak가 즉시 0이 되지 않습니다.
+오늘이 아직 미완료인 상태만으로 streak를 바로 끊지 않습니다. 오늘 기록이 없더라도 어제까지 이어진 streak는 유지됩니다.
 
 ### Calendar
 
-`HabitCalendarService`는 날짜를 다섯 가지 상태로 해석합니다.
+캘린더는 날짜를 다음 상태로 표시합니다.
 
-- `completed`: 완료 기록이 있는 날짜
-- `missed`: 이미 지난 날짜인데 완료 기록이 없는 날짜
-- `pending`: 오늘이며 아직 완료 기록이 없는 날짜
+- `completed`: GitHub 기록이 확인된 날짜
+- `missed`: 이미 지난 날짜인데 기록이 없는 날짜
+- `pending`: 오늘이며 아직 기록이 없는 날짜
 - `future`: 오늘보다 미래 날짜
-- `untracked`: GitHub 저장소 생성일 이전 날짜
+- `untracked`: GitHub 연결 전이거나 저장소 생성일 이전 날짜
 
-월간 달성률은 completed와 missed만 분모로 사용합니다. 오늘이 pending이면 월간 달성률 분모에서 제외되며, 오늘 완료 시에만 분자와 분모에 포함됩니다. 미래 날짜와 GitHub 저장소 생성일 이전 날짜는 항상 제외됩니다.
+월간 달성률은 실제로 추적 가능한 날짜만 기준으로 계산합니다.
 
-GitHub token이 삭제되면 로컬 검증 기록과 repository metadata를 함께 초기화하고, 달력은 다시 중립 상태로 표시합니다.
+### GitHub Verification
 
-### Reminder Notifications
+GitHub 연동은 기록 확인만 수행합니다.
 
-Reminder는 UserNotifications 기반 local notification으로 동작합니다.
+- GitHub API read-only request만 사용
+- GitHub write operation 없음
+- Pull Request 생성/수정 없음
+- GitHub Actions 실행 없음
+- token은 Keychain에만 저장
+- token이 저장되어 있으면 입력칸을 숨기고 연결 테스트와 삭제만 제공
 
-기본 slot:
+GitHub token을 삭제하면 GitHub로 확인된 로컬 기록과 저장소 메타데이터를 초기화하고, 캘린더는 다시 중립 상태로 돌아갑니다.
+
+### Idea Memo
+
+떠오른 생각을 가볍게 적어두는 메모 공간입니다.
+
+- 메모 생성, 수정, 삭제
+- 사용함 처리
+- 보관 및 보관 해제
+- 태그 저장
+- Claude로 넘길 글쓰기 prompt 생성 및 clipboard 복사
+
+DevStreak는 Claude API를 직접 호출하지 않습니다. prompt를 생성해 clipboard에 복사하고, 사용자가 직접 이어서 사용할 수 있게 돕습니다.
+
+### Reminder
+
+기록을 놓치지 않도록 로컬 알림을 예약합니다.
+
+기본 리마인더:
 
 - 아침 09:00
 - 저녁 18:00
 - 밤 22:00
 
-알림 권한을 허용한 뒤 각 slot의 enable/disable과 시각을 변경할 수 있습니다. 변경된 설정은 사용자가 `적용`을 확인한 뒤 `ReminderSettingsStore`를 통해 UserDefaults에 저장됩니다.
+알림 권한이 허용된 뒤에만 리마인더 설정을 변경할 수 있습니다. 변경한 시간과 토글은 사용자가 적용했을 때 저장됩니다.
 
-Scheduling 정책:
+### Widgets
 
-- 14일 rolling horizon
-- 최대 3 slot * 14일 = 42개 request
-- 오늘 이미 지난 시간은 예약하지 않음
-- 오늘 완료 상태면 오늘 reminder는 예약하지 않음
-- 미래 날짜 reminder는 유지
-- 오늘 완료 시 오늘 날짜의 pending reminder만 취소
-- notification permission이 허용되기 전에는 reminder preference를 수정하지 않음
-
-Race condition 방지를 위해 scheduling generation을 사용합니다. 오래된 sync 작업이 최신 cancel/sync 결과를 덮어쓰지 못하도록 `ReminderScheduleState`에서 최신 generation만 request를 추가할 수 있게 관리합니다.
-
-### Idea Inbox
-
-Idea Inbox는 기술 글감을 빠르게 저장하는 lightweight local store입니다.
-
-Idea는 SwiftData `@Model`로 저장됩니다.
-
-```swift
-@Model
-final class Idea {
-    @Attribute(.unique) var id: UUID
-    var title: String
-    var notes: String
-    var tagsRawValue: String
-    var statusRawValue: String
-    var createdAt: Date
-    var updatedAt: Date
-}
-```
-
-지원 상태:
-
-- `inbox`
-- `used`
-- `archived`
-
-지원 기능:
-
-- 메모 생성
-- 수정
-- 삭제
-- 사용함 처리
-- 보관
-- 보관 해제
-- 태그 저장
-
-태그는 별도 entity 없이 문자열 배열을 JSON으로 저장합니다. `TagNormalizer`가 앞뒤 공백 제거, 빈 태그 제거, 중복 제거, 입력 순서 유지를 담당합니다.
-
-### Claude Hand-off
-
-DevStreak는 Claude API를 직접 호출하지 않습니다.
-
-`Claude로 글쓰기`를 실행하면:
-
-1. Idea 메모를 기반으로 prompt를 생성
-2. prompt를 clipboard에 복사
-3. `https://claude.ai/` 열기를 시도
-
-Claude로 넘기는 행위만으로 Idea가 `used` 상태가 되지는 않습니다. 사용자가 명시적으로 `사용함으로 표시`를 눌렀을 때만 상태가 변경됩니다.
-
-### Widget
-
-Widget은 WidgetKit 기반으로 구현되어 있습니다.
+WidgetKit 기반 홈 화면 및 잠금 화면 위젯을 제공합니다.
 
 지원 family:
 
@@ -189,154 +121,74 @@ Widget은 WidgetKit 기반으로 구현되어 있습니다.
 - `accessoryRectangular`
 - `accessoryInline`
 
-Home Screen widget은 연속 기록 중심 위젯을 제공합니다. Small 위젯은 현재 연속 기록과 아이디어 메모 개수를 표시하고, medium 위젯은 최근 7일 완료 상태를 함께 표시합니다. 오늘 기록 위젯은 Lock Screen accessory circular에서 완료 여부를 표시합니다.
+홈 화면 위젯은 연속 기록과 최근 기록 흐름을 보여주고, 잠금 화면 위젯은 연속 기록 또는 오늘 기록 여부를 빠르게 확인할 수 있게 합니다.
 
-Widget은 SwiftData store를 직접 열지 않습니다. App target이 현재 상태를 `WidgetSnapshot`으로 만들어 App Group UserDefaults에 저장하고, Widget target은 이 snapshot만 읽습니다.
+## Privacy
 
-공유 App Group:
+DevStreak는 local-first app입니다.
 
-```text
-group.com.sssuunnnm.DevStreakApp
-```
+개발자는 사용자의 기록, 메모, 알림 설정, GitHub token을 수집하거나 서버로 전송하지 않습니다.
 
-Snapshot 구조:
+- DailyRecord와 Idea는 기기 내 SwiftData에 저장됩니다.
+- Reminder 설정은 기기 내 UserDefaults에 저장됩니다.
+- Widget 공유 상태는 App Group UserDefaults에 최소 snapshot만 저장됩니다.
+- GitHub token은 Keychain에만 저장됩니다.
+- GitHub token은 GitHub API 요청의 Authorization header에만 사용됩니다.
+- Analytics SDK, tracking SDK, backend server를 사용하지 않습니다.
 
-```swift
-struct WidgetSnapshot: Codable, Equatable {
-    var dateKey: String
-    var isTodayCompleted: Bool
-    var currentStreak: Int
-    var pendingIdeaCount: Int
-    var recentDays: [WidgetRecentDay]
-    var updatedAt: Date
-}
-```
+Privacy Policy:
 
-Snapshot 저장 성공 후 `WidgetCenter.reloadTimelines(ofKind:)`로 `DevStreakWidget` timeline을 갱신합니다.
+- [DevStreak Privacy Policy](https://sssuunnnm.notion.site/DevStreak-Privacy-Policy-3c70f65e84d680c0a1e0e02425ccc7d2)
 
-Stale snapshot 정책:
+Contact:
 
-- snapshot의 `dateKey`가 Widget의 현재 local dateKey와 다르면 오늘 완료 상태로 표시하지 않음
-- 오래된 snapshot으로 어제 완료를 오늘 완료처럼 보여주지 않음
-- 오래된 snapshot의 streak를 임의로 증가시키지 않음
+- `sssuunnnm@gmail.com`
 
-Widget tap은 `devstreak://dashboard` deep link로 app을 엽니다.
+## Tech Stack
 
-### GitHub Verification
+- SwiftUI
+- SwiftData
+- WidgetKit
+- UserNotifications
+- Security / Keychain
+- App Groups
+- Swift Testing
+- XCTest UI Tests
 
-GitHub integration은 repository의 실제 콘텐츠 작성 활동을 확인하기 위한 read-only verification입니다.
-
-대상 repository:
-
-```text
-sssuunnnm/dev-archive
-```
-
-인증:
-
-- GitHub 연결 전에는 자동 확인을 실행하지 않음
-- Fine-grained PAT 기반 확인
-- Token은 Keychain에만 저장
-- Token이 있으면 `Authorization: Bearer <token>` 사용
-- GitHub write permission 없음
-- Token이 저장되어 있으면 입력칸은 숨기고 연결 테스트와 삭제만 제공합니다.
-
-Dashboard verification:
-
-- 기본 lookback: 최근 7일
-- main branch commits 조회
-- open Pull Request commits 조회
-- GitHub token에서 branch를 선택하지 않으며, 현재 MVP는 앱 설정값인 `main` 기준으로 확인
-- working branch 직접 등록/검사는 현재 MVP 범위 밖
-- SHA dedupe
-- commit detail 조회
-- changed files가 인정 경로에 포함되는지 확인
-- 오늘 기록이 이미 `githubVerified`이면 앱 재진입 시 자동 verification을 다시 실행하지 않음
-
-인정 경로:
-
-```text
-src/content/articles/
-src/content/projects/
-src/content/references/
-src/content/snippets/
-```
-
-검증에서 사용하지 않는 값:
-
-- frontmatter `draft`
-- frontmatter `date`
-- branch naming convention
-- PR 존재 여부만
-- branch 존재 여부만
-
-콘텐츠 경로 변경이 확인되면 해당 local dateKey의 DailyRecord를 `githubVerified`로 생성하거나 승격합니다. 기존 `manualCompleted`도 GitHub 활동이 확인되면 `githubVerified`로 승격될 수 있습니다.
-
-실패 처리:
-
-- GitHub API 실패를 missed로 처리하지 않음
-- partial success를 DailyRecord에 저장하지 않음
-- rate limit, credential, network, decoding, budget exceeded 상태를 구분
-- token 값은 error나 log에 노출하지 않음
-
-### GitHub History Sync
-
-GitHub 설정 화면에는 최초 연결 후 자동으로 한 번 실행되는 최근 3년 기록 동기화와, 이후 사용자가 명시적으로 다시 실행할 수 있는 `최근 30일 동기화`가 있습니다.
-
-정책:
-
-- Dashboard 일반 refresh의 7일 lookback은 유지
-- 최초 연결 후 최근 3년 commit history backfill 자동 실행
-- 사용자가 직접 다시 실행할 때도 최근 30일 backfill
-- 기존 기록은 삭제하지 않음
-- 새 기록 추가 또는 기존 기록 승격만 수행
-- 저장 실패 시 rollback
-- verification 실패 시 unrelated unsaved SwiftData changes를 rollback하지 않음
-- 오늘 dateKey가 포함된 경우에만 오늘 reminder cancel side effect 실행
-- 성공 후 Widget snapshot refresh
-
-## Architecture
-
-DevStreak는 큰 Repository/ViewModel layer를 두지 않고, SwiftUI `@Query`와 `ModelContext`를 우선 사용합니다. 복잡한 계산과 side effect는 작은 service로 분리했습니다.
+## Project Structure
 
 ```text
 DevStreak/
 ├── DevStreak/
 │   ├── DevStreakApp.swift
 │   ├── Models/
-│   │   ├── DailyRecord.swift
-│   │   ├── Idea.swift
-│   │   ├── ReminderSettings.swift
-│   │   └── ReminderSlot.swift
 │   ├── Features/
 │   │   ├── Dashboard/
 │   │   ├── Ideas/
 │   │   └── Settings/
-│   │       └── GitHubConnectionCoordinator.swift
 │   ├── Services/
-│   │   ├── DateService.swift
-│   │   ├── CalendarMonthRangePolicy.swift
-│   │   ├── StreakService.swift
-│   │   ├── HabitCalendarService.swift
-│   │   ├── ReminderNotificationService.swift
-│   │   ├── GitHubAPIClient.swift
-│   │   ├── GitHubVerificationService.swift
-│   │   ├── GitHubCredentialStore.swift
-│   │   ├── GitHubRepositoryMetadataStore.swift
-│   │   ├── GitHubDailyRecordUpdater.swift
-│   │   ├── IdeaPromptService.swift
-│   │   ├── TagNormalizer.swift
-│   │   └── WidgetSnapshotService.swift
 │   ├── Shared/
-│   │   ├── WidgetSnapshot.swift
-│   │   ├── WidgetSnapshotStore.swift
-│   │   ├── WidgetDisplayState.swift
-│   │   └── WidgetConstants.swift
 │   └── Design/
 ├── DevStreakWidget/
 ├── DevStreakTests/
 └── DevStreakUITests/
 ```
+
+## Architecture Notes
+
+DevStreak는 SwiftUI와 SwiftData를 중심으로 구성되어 있습니다.
+
+복잡한 계산과 side effect는 작은 service로 분리하고, 화면은 표시 상태와 사용자 action에 집중하도록 정리하고 있습니다.
+
+주요 service:
+
+- `DateService`: 날짜, timezone, dateKey 처리
+- `StreakService`: 현재/최고 streak 계산
+- `HabitCalendarService`: 캘린더 상태와 월간 달성률 계산
+- `GitHubVerificationService`: GitHub 기록 확인
+- `GitHubDailyRecordUpdater`: 검증 결과를 DailyRecord에 반영
+- `ReminderNotificationService`: 14일 rolling local notification 예약
+- `WidgetSnapshotService`: 앱 상태를 위젯 snapshot으로 변환
 
 ## Data Flow
 
@@ -365,125 +217,11 @@ App SwiftData state
 → WidgetKit timeline
 ```
 
-### Reminder Scheduling
-
-```text
-ReminderSettingsView / app activation
-→ ReminderSettingsStore.load()
-→ authorization status 확인
-→ 14일 rolling schedule 계산
-→ managed pending requests 정리
-→ enabled reminder request 추가
-```
-
-## Design
-
-현재 UI는 Minimal Editorial 방향으로 정리되어 있습니다.
-
-- Dashboard는 오늘 목표, GitHub 확인, 아이디어 메모, 이번 달 캘린더 순서로 구성
-- SF Symbols 기반 iconography
-- Paperlogy font 적용
-- Dynamic Type 기반 typography token
-- Widget은 system background와 Lock Screen rendering을 존중
-
-Design system은 `DesignTokens`, `SoftDepthCard`, `IconPlate`, `TactileButtonStyle`로 분리되어 있으며, feature code에 색상과 spacing이 흩어지지 않도록 관리합니다.
-
-## Security
-
-- GitHub PAT는 Keychain에 저장
-- Source code에 token hardcoding 없음
-- UserDefaults에 token 저장 없음
-- GitHub API request는 read-only GET request만 사용
-- GitHub write operation 없음
-- Backend 없음
-- Claude API 호출 없음
-
-## Privacy
-
-DevStreak는 local-first app입니다. 개발자는 사용자의 작성 기록, 아이디어, 리마인더 설정, GitHub token을 수집하거나 서버로 전송하지 않습니다.
-
-Privacy Policy는 [PRIVACY.md](PRIVACY.md)에 보관하고, 배포용 공개 URL은 [DevStreak Privacy Policy](https://sssuunnnm.notion.site/DevStreak-Privacy-Policy-3c70f65e84d680c0a1e0e02425ccc7d2)입니다. 연락 이메일은 `sssuunnnm@gmail.com`입니다.
-
-Local data:
-
-- DailyRecord와 Idea는 기기 내 SwiftData에 저장
-- Reminder 설정은 기기 내 UserDefaults에 저장
-- Widget 공유 상태는 App Group UserDefaults에 최소 snapshot만 저장
-- GitHub token은 선택 사항이며 Keychain에만 저장
-
-Network behavior:
-
-- GitHub verification은 `sssuunnnm/dev-archive` repository의 read-only GitHub REST API 요청만 수행
-- Token이 있으면 GitHub API Authorization header에만 사용
-- Claude API 직접 호출 없음
-- Analytics SDK, tracking SDK, backend infrastructure 없음
-
-## App Store Preview Assets
-
-App Store / TestFlight 제출용 metadata와 preview image 초안은 repo 안에 보관합니다.
-
-- [metadata-ko.md](docs/app-store/metadata-ko.md): App Store Connect 한국어 메타데이터 초안
-
-- [Preview-1.png](docs/app-store/previews/Preview-1.png): 하루 기록과 dashboard
-- [Preview-2.png](docs/app-store/previews/Preview-2.png): GitHub 연결 필요 상태
-- [Preview-3.png](docs/app-store/previews/Preview-3.png): calendar와 home screen widget
-- [Preview-4.png](docs/app-store/previews/Preview-4.png): Idea memo 화면
-
-## Known Follow-ups
-
-배포 전 차단 이슈는 아니지만, 후속 안정화 작업으로 추적합니다.
-
-- Initial backfill resume: 최근 3년 초기 동기화가 API request budget을 초과하면 다음 시도도 처음부터 다시 시작합니다. pagination 진행 위치 저장 또는 기간 단위 분할 저장이 필요합니다.
-- Dashboard GitHub verification coordinator: Dashboard의 자동 verification 상태 전이와 side effect 일부가 아직 `DashboardView`에 남아 있습니다. Settings 쪽처럼 coordinator/view model로 분리하면 테스트와 유지보수가 쉬워집니다.
-- GitHub branch selection: 현재 MVP는 `main` branch와 open PR commit만 확인합니다. 사용자가 branch/ref를 선택하는 UI는 후속 범위입니다.
-- Repository scope expansion: 현재 MVP는 `sssuunnnm/dev-archive` 단일 repository만 지원합니다. 다중 repository 선택은 후속 범위입니다.
-
-## Testing
-
-테스트는 Swift Testing과 XCTest UI Tests로 구성되어 있습니다.
-
-주요 coverage:
-
-- DateService timezone/dateKey/month logic
-- StreakService current/best streak
-- HabitCalendarService completed/missed/pending/future status
-- Monthly completion rate
-- Reminder settings persistence
-- 14일 rolling notification schedule
-- Reminder race condition generation guard
-- Widget snapshot save/load/fallback
-- Stale widget snapshot display state
-- Idea model/status/tag normalization
-- Claude prompt generation
-- GitHub API response/error mapping
-- GitHub credential handling
-- GitHub content path matching
-- GitHub verification budget/dedupe/cache/lookback
-- GitHub DailyRecord update/backfill persistence
-- Manual completion confirmation
-
-최근 검증 기준:
-
-```text
-Last verified: 2026-08-25
-App build: succeeded
-Widget build: succeeded
-Full xcodebuild test: succeeded
-Tests: 128 passed
-```
-
 ## Requirements
-
-현재 Xcode project 설정 기준:
 
 - Xcode with iOS 26.5 SDK
 - iOS deployment target: 17.0
-- SwiftUI
-- SwiftData
-- WidgetKit
-- UserNotifications
-- Security / Keychain
-- App Groups capability
+- App Group: `group.com.sssuunnnm.DevStreakApp`
 
 Targets:
 
@@ -512,38 +250,46 @@ xcodebuild \
   -project DevStreak/DevStreak.xcodeproj \
   -scheme DevStreak \
   -destination 'generic/platform=iOS Simulator' \
-  build
-```
-
-Build widget:
-
-```bash
-xcodebuild \
-  -project DevStreak/DevStreak.xcodeproj \
-  -scheme DevStreakWidget \
-  -destination 'generic/platform=iOS Simulator' \
+  CODE_SIGNING_ALLOWED=NO \
   build
 ```
 
 Run tests:
 
 ```bash
-xcodebuild test \
+xcodebuild \
   -project DevStreak/DevStreak.xcodeproj \
   -scheme DevStreak \
-  -destination 'platform=iOS Simulator,name=iPhone 17'
+  -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0.1' \
+  CODE_SIGNING_ALLOWED=NO \
+  -only-testing:DevStreakTests \
+  test
 ```
 
-## Repository Scope
+## App Store Assets
 
-DevStreak intentionally does not implement:
+App Store / TestFlight 제출용 metadata와 preview image 초안은 repo 안에 보관합니다.
 
-- Blog CMS features
-- Blog deployment
-- GitHub write operations
-- Pull Request creation
-- Claude API integration
-- Backend infrastructure
-- Widget-side SwiftData access
+- [metadata-ko.md](docs/app-store/metadata-ko.md): App Store Connect 한국어 메타데이터
+- [Preview-1.png](docs/app-store/previews/Preview-1.png): 하루 기록과 dashboard
+- [Preview-2.png](docs/app-store/previews/Preview-2.png): GitHub 연결 필요 상태
+- [Preview-3.png](docs/app-store/previews/Preview-3.png): calendar와 home screen widget
+- [Preview-4.png](docs/app-store/previews/Preview-4.png): Idea memo 화면
 
-The app focuses on one job: helping a developer keep a daily technical writing habit visible, measurable, and easy to resume.
+## Current Release
+
+- Version: `1.0`
+- Deployment target: iOS 17.0
+- Language: Korean
+- Availability: South Korea
+- Price: Free
+- App Store review submitted: 2026-08-26
+
+## Known Follow-ups
+
+배포 전 차단 이슈는 아니지만, 후속 안정화 작업으로 추적합니다.
+
+- Initial backfill resume: 최근 3년 초기 동기화가 API request budget을 초과하면 다음 시도도 처음부터 다시 시작합니다. pagination 진행 위치 저장 또는 기간 단위 분할 저장이 필요합니다.
+- Dashboard GitHub verification coordinator: Dashboard의 자동 verification 상태 전이와 side effect 일부가 아직 `DashboardView`에 남아 있습니다. Settings 쪽처럼 coordinator/view model로 분리하면 테스트와 유지보수가 쉬워집니다.
+- GitHub branch selection: 현재 MVP는 `main` branch와 open PR commit만 확인합니다. 사용자가 branch/ref를 선택하는 UI는 후속 범위입니다.
+- Repository scope expansion: 현재 MVP는 `sssuunnnm/dev-archive` 단일 repository만 지원합니다. 다중 repository 선택은 후속 범위입니다.
